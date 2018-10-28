@@ -1,0 +1,1 @@
+# TODO: Provide formatting of JSON data - from JSON to dict and from dict to JSON + error handling
