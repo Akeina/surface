@@ -1,4 +1,3 @@
-# TODO: Make this a singleton
 class DataManager:
 
     def __init__(self):
@@ -18,8 +17,25 @@ class DataManager:
             self._data[key] = value
 
 
-# Create a globally accessible data manager
-data = DataManager()
+# Create a closure for the data manager
+def _init_manager():
+
+    # Create a free variable for the Data Manager TODO: Make it a singleton
+    d = DataManager()
+
+    # Inner function to return the current state of the data
+    def get_data(*args):
+        return d.get(*args)
+
+    # Inner function to alter the data
+    def set_data(**kwargs):
+        return d.set(**kwargs)
+
+    return get_data, set_data
+
+
+# Create globally accessible functions to manage the data
+get_data, set_data = _init_manager()
 
 # TODO: Remove this - temp test data
-data.set(test_0=0, test_1=1, test_2=2)
+set_data(test_0=0, test_1=1, test_2=2)

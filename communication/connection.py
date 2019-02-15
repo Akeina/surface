@@ -44,7 +44,7 @@ class Connection:
                 while True:
 
                     # Send current state of the data manager
-                    self._socket.sendall(bytes(dumps(dm.data.get()), encoding="utf-8"))
+                    self._socket.sendall(bytes(dumps(dm.get_data()), encoding="utf-8"))
 
                     try:
                         # Once connected, keep receiving and sending the data, break in case of errors
@@ -70,7 +70,7 @@ class Connection:
 
                         # Attempt to decode from JSON, inform about invalid data received
                         try:
-                            dm.data.set(**loads(data))
+                            dm.set_data(**loads(data))
                         except JSONDecodeError:
                             print("Received invalid data: {}".format(data))
 
