@@ -1,14 +1,8 @@
 import socket
 from json import loads, dumps, JSONDecodeError
+from time import sleep
 
 import communication.data_manager as dm
-
-
-# TODO:
-'''
-Attempt to make it a non-blocking client, just in case (although deadlock should not happen). If happens and isn't fixed
-by OS (and therefore Python's exception) - possibly add resetting the server/client after a certain amount of time
-'''
 
 
 class Connection:
@@ -22,18 +16,22 @@ class Connection:
         # Initialise the socket field
         self._socket = None
 
+        # Initialise the delay constant to offload some computing power when reconnecting
+        self._RECONNECT_DELAY = 1
+
     def connect(self):
 
         # Never stop the connection once it was started
         while True:
 
-            if self._socket is None:
-                # Inform that client is attempting to connect to the server
-                print("Connecting to {}:{}...".format(self._ip, self._port))
-
             try:
-                # Initialise the socket for IPv4 addresses (hence AF_INET) and TCP (hence SOCK_STREAM)
+                # Check if the socket is None to avoid running into errors when reconnecting
                 if self._socket is None:
+
+                    # Inform that client is attempting to connect to the server
+                    print("Connecting to {}:{}...".format(self._ip, self._port))
+
+                    # Set the socket for IPv4 addresses (hence AF_INET) and TCP (hence SOCK_STREAM)
                     self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
                 # Connect to the server
@@ -43,11 +41,12 @@ class Connection:
                 # Keep exchanging data
                 while True:
 
-                    # Send current state of the data manager
-                    self._socket.sendall(bytes(dumps(dm.get_data()), encoding="utf-8"))
-
+                    # Once connected, keep receiving and sending the data, break in case of errors
                     try:
-                        # Once connected, keep receiving and sending the data, break in case of errors
+                        # Send current state of the data manager
+                        self._socket.sendall(bytes(dumps(dm.get_data()), encoding="utf-8"))
+
+                        # Receive the data
                         data = self._socket.recv(4096)
 
                         # If 0-byte was received, close the connection
@@ -83,8 +82,13 @@ class Connection:
 
             except ConnectionRefusedError:
                 continue
+            except OSError:
+                # Reconnect in case of host socket loss (e.g. Ethernet unplugged)
+                sleep(self._RECONNECT_DELAY)
+                continue
 
 
 if __name__ == "__main__":
     s = Connection()
+    #s = Connection(ip="169.254.147.140", port=50001)
     s.connect()
