@@ -1,3 +1,34 @@
+"""
+
+Connection is used to handle the information exchange with the Raspberry Pi.
+
+** Usage **
+
+By importing the module you gain access to the class 'Connection'.
+
+You should create an instance of it and use the 'connect' function to start the communication. The constructor of the
+'Connection' class takes 2 optional parameters - 'ip' and 'port', which can be specified to identify address of the
+Raspberry Pi. Ip passed should be a string, whereas the port an integer. Both arguments are of the keyword-only type.
+
+Once connected, the 'Connection' class should handle everything, including formatting, encoding and re-connecting in
+case of data loss.
+
+** Example **
+
+Let ip be 169.254.147.140 and port 50000. To connect with the Raspberry Pi at the given address, call:
+
+    connection = Connection(ip=169.254.147.140)
+
+The port is 50000 by default, so it's not necessary to explicitly specify it. To connect, call:
+
+    connection.connect()
+
+** Author **
+
+Kacper Florianski
+
+"""
+
 import socket
 from json import loads, dumps, JSONDecodeError
 from time import sleep
@@ -20,6 +51,14 @@ class Connection:
         self._RECONNECT_DELAY = 1
 
     def connect(self):
+        """
+
+        Method used to run a continuous connection with Raspberry Pi
+
+        Runs an infinite loop that performs re-connection to the given address as well as exchanges data with it, via
+        blocking send and receive functions. The data exchanged is JSON-encoded.
+
+        """
 
         # Never stop the connection once it was started
         while True:

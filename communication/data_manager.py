@@ -1,3 +1,39 @@
+"""
+
+Data Manager is used to maintain different states of data across the system.
+
+** Usage **
+
+By importing the module you gain access to two global functions - 'get_data' and 'set_data'.
+
+You should use the 'get_data' function to gain access to the available resources. You may specify additional arguments,
+which should be dictionary keys, to retrieve a part of the data. If no arguments are specified, the entire dictionary is
+returned. The arguments passed should be strings (because the keys are stored as strings).
+
+You should use the 'set_data' function to change the resources. For each keyword argument passed, the state of the
+data dictionary under the given key will be changed to the given value.
+
+** Example **
+
+Let axis_x = 10, axis_y = 20, axis_z = -15. To save these values into the data manager, call:
+
+    set_data(axis_x=10, axis_y=20, axis_z=-15)
+
+To retrieve the information about axis x and y, call:
+
+    data = get_data('axis_x', 'axis_y')
+
+The result of printing data is as follows:
+
+    {'axis_x': 10, 'axis_y': 20}
+
+** Author **
+
+Kacper Florianski
+
+"""
+
+
 class DataManager:
 
     def __init__(self):
@@ -20,7 +56,7 @@ class DataManager:
 # Create a closure for the data manager
 def _init_manager():
 
-    # Create a free variable for the Data Manager TODO: Make it a singleton
+    # Create a free variable for the Data Manager
     d = DataManager()
 
     # Inner function to return the current state of the data
@@ -36,6 +72,3 @@ def _init_manager():
 
 # Create globally accessible functions to manage the data
 get_data, set_data = _init_manager()
-
-# TODO: Remove this - temp test data
-set_data(test_0=0, test_1=1, test_2=2)
