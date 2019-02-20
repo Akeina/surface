@@ -1,3 +1,45 @@
+"""
+
+Dam is used to provide an abstraction data structure to solve the autonomous driving task.
+
+** Usage **
+
+By importing the module you gain access to a number of classes, each representing different components of the dam.
+
+The 'Dam' class provides the highest level of abstraction to represent a grid of squares. It provides a simple function
+to mark a crack at a given position, where the position's default value is the position of currently viewed square. The
+dam is printable, and presents a grid of squares with the lengths of cracks in them. The grid is indexed as follows:
+
+|  0  |  1  |  2  |  3  |
+|  4  |  5  |  6  |  7  |
+|  8  |  9  | 10  | 11  |
+
+The 'Square' class is used to maintain information about cracks' positions, by remember if a crack is in it or not.
+
+The 'Crack' class carries information about the length of a crack, and supports error-checking against requirements.
+
+** Example **
+
+Let dam = Dam(). To mark a crack of length 21.3 at the current position, call:
+
+    dam.position = 0
+    dam.mark_crack(21.3)
+
+Notice that without specifying the position, a 'TypeError' would be raised. The result of printing dam is as follows:
+
+    |  20   |   X   |   X   |   X   |
+    |   X   |   X   |   X   |   X   |
+    |   X   |   X   |   X   |   X   |
+
+Notice that the actual value registered is 20, due to the competition's requirements for a crack (max length is 20).
+
+** Author **
+
+Kacper Florianski
+
+"""
+
+
 class Dam:
 
     def __init__(self):
@@ -5,17 +47,45 @@ class Dam:
         # Initialise a list of squares. Indexing is in form (column - 1) + 4*(row - 1)
         self._squares = [Square(i) for i in range(12)]
 
-        # Initialise the current position on the map, -1 if no start point initialised
-        self._position = -1
+        # Initialise the current position on the map, None if no start point initialised
+        self._position = None
 
         # Initialise the start and end shapes - these will be provided by the competition judge
         self.start_shape, self.end_shape = None, None
 
-    def mark_crack(self, length: float):
+    def mark_crack(self, length: float, *, position=None):
+        """
 
-        # Add a crack to the square at current position if it didn't contain one
-        if self._squares[self._position].crack is None:
-            self._squares[self._position].crack = length
+        Method used to save the crack onto a grid.
+
+        :param length: Length of the crack.
+        :param position: Grid position. Check indexing in module's docstrings to understand better.
+
+        """
+
+        # Handle the default position
+        if position is None:
+
+            # Check if the position has been assigned
+            if self._position is not None:
+                position = self._position
+
+        # Add a crack to the square at the given position if it didn't contain one
+        if self._squares[position].crack is None:
+            self._squares[position].crack = length
+
+    @property
+    def position(self):
+        return self._position
+
+    @position.setter
+    def position(self, value):
+
+        # Check if the value specified is between 0 and 12 inclusive
+        if value in range(13):
+            self._position = value
+        else:
+            raise ValueError("Position index must be between 0 and 12 inclusive")
 
     def __str__(self):
 
@@ -68,6 +138,13 @@ class Crack:
         return self._length
 
     def _format_length(self):
+        """
+
+        Method used to restrict the length by the competition's requirements.
+
+        Precisely, the restrictions are on the maximum length, minimum length, and the number of digits after the coma.
+
+        """
 
         # Format the length to meet the requirements / restrictions of the competition
         self._length = max(self._length, self.LENGTH_MIN)
