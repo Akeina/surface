@@ -1,3 +1,65 @@
+"""
+
+Controller is used to read and process game pad input.
+
+** Usage **
+
+By importing the module you gain access to the class 'Controller', and some additional methods.
+
+You should create an instance of it and use the 'init' function to start reading the input. The class will keep reading
+the controller data and lets you access it through multiple fields. A complete list is as follows:
+
+* Axis (ints) *
+
+    left_axis_x
+    left_axis_y
+    right_axis_x
+    right_axis_y
+
+* Triggers (ints) *
+
+    left_trigger
+    right_trigger
+
+* Hat (ints) *
+
+    hat_y
+    hat_x
+
+* Buttons (booleans) *
+
+    button_A
+    button_B
+    button_X
+    button_Y
+    button_LB
+    button_RB
+    button_left_stick
+    button_right_stick
+    button_select
+    button_start
+
+In addition, you can change the constant values of axis' and triggers' min max, to adjust the expected output values. In
+order to update the data manager with a certain value, adjust the '_dispatch_event' method.
+
+** Example **
+
+The data manager will be referred to as 'dm'.
+
+To create a controller object, call:
+
+    controller = Controller(dm)
+
+To start reading input, call:
+
+    controller.init()
+
+** Author **
+
+Kacper Florianski
+
+"""
+
 from threading import Thread
 from inputs import devices
 from time import sleep
@@ -21,7 +83,10 @@ def normalise(value, current_min, current_max, intended_min, intended_max):
 
 class Controller:
 
-    def __init__(self):
+    def __init__(self, dm):
+
+        # Store the data manager information
+        self._dm = dm
 
         # Fetch the hardware reference via inputs
         self._controller = devices.gamepads[0]
@@ -154,24 +219,32 @@ class Controller:
             # Listen to axis change
             if event.code == "ABS_X":
                 self.left_axis_x = event.state
+                self._dm.set_data(lax=self.left_axis_x)
             elif event.code == "ABS_Y":
                 self.left_axis_y = event.state
+                self._dm.set_data(lay=self.left_axis_y)
             elif event.code == "ABS_RX":
                 self.right_axis_x = event.state
+                self._dm.set_data(rax=self.right_axis_x)
             elif event.code == "ABS_RY":
                 self.right_axis_y = event.state
+                self._dm.set_data(ray=self.right_axis_y)
 
             # Listen to trigger change
             elif event.code == "ABS_Z":
                 self.left_trigger = event.state
+                self._dm.set_data(lt=self.left_trigger)
             elif event.code == "ABS_RZ":
                 self.right_trigger = event.state
+                self._dm.set_data(rt=self.right_trigger)
 
             # Listen to hat change
             elif event.code == "ABS_HAT0X":
                 self.hat_x = event.state
+                self._dm.set_data(hx=self.hat_x)
             elif event.code == "ABS_HAT0Y":
                 self.hat_y = event.state
+                self._dm.set_data(hy=self.hat_y)
 
         # Listen to button changes
         else:
