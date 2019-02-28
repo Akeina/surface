@@ -33,12 +33,13 @@ import socket
 from json import loads, dumps, JSONDecodeError
 from time import sleep
 
-import communication.data_manager as dm
-
 
 class Connection:
 
-    def __init__(self, *, ip="localhost", port=50000):
+    def __init__(self, dm: "Data Manager", *, ip="localhost", port=50000):
+
+        # Store the data manager information
+        self._dm = dm
 
         # Save the host and port information
         self._ip = ip
@@ -53,7 +54,7 @@ class Connection:
     def connect(self):
         """
 
-        Method used to run a continuous connection with Raspberry Pi
+        Method used to run a continuous connection with Raspberry Pi.
 
         Runs an infinite loop that performs re-connection to the given address as well as exchanges data with it, via
         blocking send and receive functions. The data exchanged is JSON-encoded.
@@ -83,7 +84,7 @@ class Connection:
                     # Once connected, keep receiving and sending the data, break in case of errors
                     try:
                         # Send current state of the data manager
-                        self._socket.sendall(bytes(dumps(dm.get_data()), encoding="utf-8"))
+                        self._socket.sendall(bytes(dumps(self._dm.get_data()), encoding="utf-8"))
 
                         # Receive the data
                         data = self._socket.recv(4096)
@@ -108,7 +109,7 @@ class Connection:
 
                         # Attempt to decode from JSON, inform about invalid data received
                         try:
-                            dm.set_data(**loads(data))
+                            self._dm.set_data(**loads(data))
                         except JSONDecodeError:
                             print("Received invalid data: {}".format(data))
 
@@ -125,9 +126,3 @@ class Connection:
                 # Reconnect in case of host socket loss (e.g. Ethernet unplugged)
                 sleep(self._RECONNECT_DELAY)
                 continue
-
-
-if __name__ == "__main__":
-    s = Connection()
-    #s = Connection(ip="169.254.147.140", port=50001)
-    s.connect()
