@@ -89,7 +89,11 @@ class Controller:
         self._dm = dm
 
         # Fetch the hardware reference via inputs
-        self._controller = devices.gamepads[0]
+        try:
+            self._controller = devices.gamepads[0]
+        except IndexError:
+            print("No game controllers detected.")
+            return
 
         # Initialise the axis hardware values
         self._AXIS_MAX = 32767
@@ -108,7 +112,7 @@ class Controller:
         self._trigger_min = 0
 
         # Initialise the inputs delay (to slow down with reading the data)
-        self._READ_DELAY = 0.01
+        self._READ_DELAY = 0.05
 
         # Declare the sensitivity level (when to update the axis value), smaller value for higher sensitivity
         self._SENSITIVITY = 100
@@ -285,8 +289,13 @@ class Controller:
 
     def init(self):
 
+        # Check if the controller was correctly created
+        if not hasattr(self, "_controller"):
+            print("Controller initialisation error detected.")
+
         # Start the thread (to not block the main execution)
-        Thread(target=self._read).start()
+        else:
+            Thread(target=self._read).start()
 
     def __str__(self):
         return "\n".join([
