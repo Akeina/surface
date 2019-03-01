@@ -86,7 +86,7 @@ class Connection:
                     # Once connected, keep receiving and sending the data, break in case of errors
                     try:
                         # Send current state of the data manager
-                        self._socket.sendall(bytes(dumps(self._dm.get_data()), encoding="utf-8"))
+                        self._socket.sendall(bytes(dumps(self._dm.get_data(transmit=True)), encoding="utf-8"))
 
                         # Receive the data
                         data = self._socket.recv(4096)

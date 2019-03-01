@@ -10,6 +10,11 @@ You should use the 'get_data' function to gain access to the available resources
 which should be dictionary keys, to retrieve a part of the data. If no arguments are specified, the entire dictionary is
 returned. The arguments passed should be strings (because the keys are stored as strings).
 
+Set the additional 'transmit' keyword argument when retrieving the data, if the dictionary returned should only contain
+the fields that should be sent over the network. Each item to be sent over the network must be specified in the
+'_transmission_keys' set within the class, and agreed with the lower-level team beforehand. Set the argument to True to
+retrieve such data. The base functionality otherwise stays the same as with the argument being (by default) False.
+
 You should use the 'set_data' function to change the resources. For each keyword argument passed, the state of the
 data dictionary under the given key will be changed to the given value.
 
@@ -38,10 +43,22 @@ class DataManager:
 
     def __init__(self):
 
-        # Declare data dictionary
+        # Initialise the data dictionary
         self._data = dict()
 
-    def get(self, *args):
+        # Create a set of keys matching data which should be sent over the network
+        self._transmission_keys = {
+            "lax", "lay", "rax", "ray"
+        }
+
+    def get(self, *args, transmit=False):
+
+        # If the data retrieved is meant to be sent over the network
+        if transmit:
+
+            # Return selected data or transmission-specific dictionary if no args passed
+            return {key: self._data[key] for key in args if key in self._transmission_keys} if args else \
+                   {key: self._data[key] for key in self._transmission_keys if key in self._data}
 
         # Return selected data or whole dictionary if no args passed
         return {key: self._data[key] for key in args} if args else self._data
@@ -60,8 +77,8 @@ def _init_manager():
     d = DataManager()
 
     # Inner function to return the current state of the data
-    def get_data(*args):
-        return d.get(*args)
+    def get_data(*args, transmit=False):
+        return d.get(*args, transmit=transmit)
 
     # Inner function to alter the data
     def set_data(**kwargs):
