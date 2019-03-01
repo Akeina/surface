@@ -34,6 +34,7 @@ Kacper Florianski
 import socket
 from json import loads, dumps, JSONDecodeError
 from time import sleep
+from threading import Thread
 
 
 class Connection:
@@ -54,6 +55,11 @@ class Connection:
         self._RECONNECT_DELAY = 1
 
     def connect(self):
+
+        # Start the thread (to not block the main execution)
+        Thread(target=self._connect).start()
+
+    def _connect(self):
         """
 
         Method used to run a continuous connection with Raspberry Pi.
