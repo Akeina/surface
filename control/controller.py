@@ -62,7 +62,7 @@ Kacper Florianski
 
 from threading import Thread
 from inputs import devices
-from time import sleep
+from time import time
 
 
 def normalise(value, current_min, current_max, intended_min, intended_max):
@@ -83,7 +83,7 @@ def normalise(value, current_min, current_max, intended_min, intended_max):
 
 class Controller:
 
-    def __init__(self, dm):
+    def __init__(self, dm: "Data Manager"):
 
         # Store the data manager information
         self._dm = dm
@@ -110,9 +110,6 @@ class Controller:
         # Initialise the axis goal values
         self._trigger_max = 255
         self._trigger_min = 0
-
-        # Initialise the inputs delay (to slow down with reading the data)
-        self._READ_DELAY = 0.05
 
         # Declare the sensitivity level (when to update the axis value), smaller value for higher sensitivity
         self._SENSITIVITY = 100
@@ -147,6 +144,12 @@ class Controller:
         self.button_select = False
         self.button_start = False
 
+        # Initialise the data manager keys to update
+        self._keys_to_update = set()
+
+        # Initialise the inputs delay (to slow down with reading the data)
+        self._UPDATE_DELAY = 0.01
+
     @property
     def left_axis_x(self):
         return normalise(self._left_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
@@ -155,6 +158,7 @@ class Controller:
     def left_axis_x(self, value):
         if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._left_axis_x - value) >= self._SENSITIVITY:
             self._left_axis_x = value
+            self._keys_to_update.add("lax")
 
     @property
     def left_axis_y(self):
@@ -164,6 +168,7 @@ class Controller:
     def left_axis_y(self, value):
         if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._left_axis_y - value) >= self._SENSITIVITY:
             self._left_axis_y = value
+            self._keys_to_update.add("lay")
 
     @property
     def right_axis_x(self):
@@ -173,6 +178,7 @@ class Controller:
     def right_axis_x(self, value):
         if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._right_axis_x - value) >= self._SENSITIVITY:
             self._right_axis_x = value
+            self._keys_to_update.add("rax")
 
     @property
     def right_axis_y(self):
@@ -182,6 +188,7 @@ class Controller:
     def right_axis_y(self, value):
         if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._right_axis_y - value) >= self._SENSITIVITY:
             self._right_axis_y = value
+            self._keys_to_update.add("ray")
 
     @property
     def left_trigger(self):
@@ -190,6 +197,7 @@ class Controller:
     @left_trigger.setter
     def left_trigger(self, value):
         self._left_trigger = value
+        self._keys_to_update.add("lt")
 
     @property
     def right_trigger(self):
@@ -198,6 +206,7 @@ class Controller:
     @right_trigger.setter
     def right_trigger(self, value):
         self._right_trigger = value
+        self._keys_to_update.add("rt")
 
     @property
     def hat_x(self):
@@ -206,6 +215,7 @@ class Controller:
     @hat_x.setter
     def hat_x(self, value):
         self._hat_x = value
+        self._keys_to_update.add("hx")
 
     @property
     def hat_y(self):
@@ -213,42 +223,35 @@ class Controller:
 
     @hat_y.setter
     def hat_y(self, value):
-        self._hat_y = value
+        self._hat_y = value*(-1)
+        self._keys_to_update.add("hy")
 
     def _dispatch_event(self, event):
 
-        # Listen to non-button changes (these values will have getters and setters)
+        # Listen to non-button changes (these values will have getters and setters) and populate the keys to update
         if event.code[:4] == "ABS_":
 
             # Listen to axis change
             if event.code == "ABS_X":
                 self.left_axis_x = event.state
-                self._dm.set_data(lax=self.left_axis_x)
             elif event.code == "ABS_Y":
                 self.left_axis_y = event.state
-                self._dm.set_data(lay=self.left_axis_y)
             elif event.code == "ABS_RX":
                 self.right_axis_x = event.state
-                self._dm.set_data(rax=self.right_axis_x)
             elif event.code == "ABS_RY":
                 self.right_axis_y = event.state
-                self._dm.set_data(ray=self.right_axis_y)
 
             # Listen to trigger change
             elif event.code == "ABS_Z":
                 self.left_trigger = event.state
-                self._dm.set_data(lt=self.left_trigger)
             elif event.code == "ABS_RZ":
                 self.right_trigger = event.state
-                self._dm.set_data(rt=self.right_trigger)
 
             # Listen to hat change
             elif event.code == "ABS_HAT0X":
                 self.hat_x = event.state
-                self._dm.set_data(hx=self.hat_x)
             elif event.code == "ABS_HAT0Y":
                 self.hat_y = event.state
-                self._dm.set_data(hy=self.hat_y)
 
         # Listen to button changes
         else:
@@ -273,6 +276,46 @@ class Controller:
             elif event.code == "BTN_SELECT":
                 self.button_start = bool(event.state)
 
+    def _tick_update_data(self):
+
+        # Iterate over all keys that should be updated (use copy of the set to avoid runtime concurrency errors)
+        for key in self._keys_to_update.copy():
+
+            # Update axis change
+            if key == "lax":
+                self._dm.set_data(lax=self.left_axis_x)
+            elif key == "lay":
+                self._dm.set_data(lay=self.left_axis_y)
+            elif key == "rax":
+                self._dm.set_data(rax=self.right_axis_x)
+            elif key == "ray":
+                self._dm.set_data(ray=self.right_axis_y)
+
+            # Update trigger change
+            elif key == "lt":
+                self._dm.set_data(lt=self.left_trigger)
+            elif key == "rt":
+                self._dm.set_data(rt=self.right_trigger)
+
+            # Update hat change
+            elif key == "hx":
+                self._dm.set_data(hx=self.hat_x)
+            elif key == "hy":
+                self._dm.set_data(hy=self.hat_y)
+
+    def _update_data(self):
+
+        # Initialise the time counter
+        timer = time()
+
+        # Keep updating the data
+        while True:
+
+            # Update the data if enough time passed
+            if time() - timer > self._UPDATE_DELAY:
+                self._tick_update_data()
+                timer = time()
+
     def _read(self):
 
         # Keep reading the input
@@ -284,18 +327,16 @@ class Controller:
             # Distribute the event to a corresponding field
             self._dispatch_event(event)
 
-            # Delay the next read
-            sleep(self._READ_DELAY)
-
     def init(self):
 
         # Check if the controller was correctly created
         if not hasattr(self, "_controller"):
             print("Controller initialisation error detected.")
 
-        # Start the thread (to not block the main execution)
+        # Start the threads (to not block the main execution) with event dispatching and data updating
         else:
             Thread(target=self._read).start()
+            Thread(target=self._update_data).start()
 
     def __str__(self):
         return "\n".join([
