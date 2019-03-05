@@ -40,7 +40,8 @@ the controller data and lets you access it through multiple fields. A complete l
     button_start
 
 In addition, you can change the constant values of axis' and triggers' min max, to adjust the expected output values. In
-order to update the data manager with a certain value, adjust the '_dispatch_event' method.
+order to update the data manager with a certain value, adjust the '_create_data_manager_keys' method. Remember, you must
+provide both the setter and the getter for the field as well as update the '_keys_to_update' set in such setter.
 
 ** Example **
 
@@ -144,6 +145,12 @@ class Controller:
         self.button_select = False
         self.button_start = False
 
+        # Initialise the event to field mapping
+        self._create_dispatch_keys()
+
+        # Initialise the data manager keys to field mapping
+        self._create_data_manager_keys()
+
         # Initialise the data manager keys to update
         self._keys_to_update = set()
 
@@ -226,82 +233,57 @@ class Controller:
         self._hat_y = value*(-1)
         self._keys_to_update.add("hy")
 
+    def _create_dispatch_keys(self):
+
+        self._dispatch_keys = {
+            "ABS_X": "left_axis_x",
+            "ABS_Y": "left_axis_y",
+            "ABS_RX": "right_axis_x",
+            "ABS_RY": "right_axis_y",
+            "ABS_Z": "left_trigger",
+            "ABS_RZ": "right_trigger",
+            "ABS_HAT0X": "hat_x",
+            "ABS_HAT0Y": "hat_y",
+            "BTN_SOUTH": "button_A",
+            "BTN_EAST": "button_B",
+            "BTN_WEST": "button_X",
+            "BTN_NORTH": "button_Y",
+            "BTN_TL": "button_LB",
+            "BTN_TR": "button_RB",
+            "BTN_THUMBL": "button_left_stick",
+            "BTN_THUMBR": "button_right_stick",
+            "BTN_START": "button_select",
+            "BTN_SELECT": "button_start"
+        }
+
+    def _create_data_manager_keys(self):
+
+        self._data_manager_keys = {
+            "lax": "left_axis_x",
+            "lay": "left_axis_y",
+            "rax": "right_axis_x",
+            "ray": "right_axis_y",
+            "lt": "left_trigger",
+            "rt": "right_trigger",
+            "hx": "hat_x",
+            "hy": "hat_y",
+        }
+
     def _dispatch_event(self, event):
 
-        # Listen to non-button changes (these values will have getters and setters) and populate the keys to update
-        if event.code[:4] == "ABS_":
+        # Check if a registered event was passed
+        if event.code in self._dispatch_keys:
 
-            # Listen to axis change
-            if event.code == "ABS_X":
-                self.left_axis_x = event.state
-            elif event.code == "ABS_Y":
-                self.left_axis_y = event.state
-            elif event.code == "ABS_RX":
-                self.right_axis_x = event.state
-            elif event.code == "ABS_RY":
-                self.right_axis_y = event.state
-
-            # Listen to trigger change
-            elif event.code == "ABS_Z":
-                self.left_trigger = event.state
-            elif event.code == "ABS_RZ":
-                self.right_trigger = event.state
-
-            # Listen to hat change
-            elif event.code == "ABS_HAT0X":
-                self.hat_x = event.state
-            elif event.code == "ABS_HAT0Y":
-                self.hat_y = event.state
-
-        # Listen to button changes
-        else:
-            if event.code == "BTN_SOUTH":
-                self.button_A = bool(event.state)
-            elif event.code == "BTN_EAST":
-                self.button_B = bool(event.state)
-            elif event.code == "BTN_WEST":
-                self.button_X = bool(event.state)
-            elif event.code == "BTN_NORTH":
-                self.button_Y = bool(event.state)
-            elif event.code == "BTN_TL":
-                self.button_LB = bool(event.state)
-            elif event.code == "BTN_TR":
-                self.button_RB = bool(event.state)
-            elif event.code == "BTN_THUMBL":
-                self.button_left_stick = bool(event.state)
-            elif event.code == "BTN_THUMBR":
-                self.button_right_stick = bool(event.state)
-            elif event.code == "BTN_START":
-                self.button_select = bool(event.state)
-            elif event.code == "BTN_SELECT":
-                self.button_start = bool(event.state)
+            # Update the corresponding value
+            self.__setattr__(self._dispatch_keys[event.code], event.state)
 
     def _tick_update_data(self):
 
         # Iterate over all keys that should be updated (use copy of the set to avoid runtime concurrency errors)
         for key in self._keys_to_update.copy():
 
-            # Update axis change
-            if key == "lax":
-                self._dm.set_data(lax=self.left_axis_x)
-            elif key == "lay":
-                self._dm.set_data(lay=self.left_axis_y)
-            elif key == "rax":
-                self._dm.set_data(rax=self.right_axis_x)
-            elif key == "ray":
-                self._dm.set_data(ray=self.right_axis_y)
-
-            # Update trigger change
-            elif key == "lt":
-                self._dm.set_data(lt=self.left_trigger)
-            elif key == "rt":
-                self._dm.set_data(rt=self.right_trigger)
-
-            # Update hat change
-            elif key == "hx":
-                self._dm.set_data(hx=self.hat_x)
-            elif key == "hy":
-                self._dm.set_data(hy=self.hat_y)
+            # Update the corresponding value
+            self._dm.set_data(**{key: self.__getattribute__(self._data_manager_keys[key])})
 
     def _update_data(self):
 
