@@ -61,6 +61,7 @@ Kacper Florianski
 
 """
 
+import communication.data_manager as dm
 from threading import Thread
 from inputs import devices
 from time import time
@@ -84,10 +85,7 @@ def normalise(value, current_min, current_max, intended_min, intended_max):
 
 class Controller:
 
-    def __init__(self, dm: "Data Manager"):
-
-        # Store the data manager information
-        self._dm = dm
+    def __init__(self):
 
         # Fetch the hardware reference via inputs
         try:
@@ -95,6 +93,11 @@ class Controller:
         except IndexError:
             print("No game controllers detected.")
             return
+
+        # Initialise the processes / threads
+        # TODO: Change data_thread into Process, fix pickle-related issues (inputs library non-picklable)
+        self._data_thread = Thread(target=self._update_data)
+        self._controller_thread = Thread(target=self._read)
 
         # Initialise the axis hardware values
         self._AXIS_MAX = 32767
@@ -283,7 +286,7 @@ class Controller:
         for key in self._keys_to_update.copy():
 
             # Update the corresponding value
-            self._dm.set_data(**{key: self.__getattribute__(self._data_manager_keys[key])})
+            dm.set_data(**{key: self.__getattribute__(self._data_manager_keys[key])})
 
     def _update_data(self):
 
@@ -317,8 +320,8 @@ class Controller:
 
         # Start the threads (to not block the main execution) with event dispatching and data updating
         else:
-            Thread(target=self._read).start()
-            Thread(target=self._update_data).start()
+            self._data_thread.start()
+            self._controller_thread.start()
 
     def __str__(self):
         return "\n".join([

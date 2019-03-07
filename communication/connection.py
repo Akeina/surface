@@ -32,17 +32,18 @@ Kacper Florianski
 """
 
 import socket
+import communication.data_manager as dm
 from json import loads, dumps, JSONDecodeError
 from time import sleep
-from threading import Thread
+from multiprocessing import Process
 
 
 class Connection:
 
-    def __init__(self, dm: "Data Manager", *, ip="localhost", port=50000):
+    def __init__(self, *, ip="localhost", port=50000):
 
-        # Store the data manager information
-        self._dm = dm
+        # Initialise the connection process
+        self._connection_process = Process(target=self._connect)
 
         # Save the host and port information
         self._ip = ip
@@ -56,8 +57,8 @@ class Connection:
 
     def connect(self):
 
-        # Start the thread (to not block the main execution)
-        Thread(target=self._connect).start()
+        # Start the process (to not block the main execution)
+        self._connection_process.start()
 
     def _connect(self):
         """
@@ -92,7 +93,7 @@ class Connection:
                     # Once connected, keep receiving and sending the data, break in case of errors
                     try:
                         # Send current state of the data manager
-                        self._socket.sendall(bytes(dumps(self._dm.get_data(transmit=True)), encoding="utf-8"))
+                        self._socket.sendall(bytes(dumps(dm.get_data(transmit=True)), encoding="utf-8"))
 
                         # Receive the data
                         data = self._socket.recv(4096)
@@ -117,7 +118,7 @@ class Connection:
 
                         # Attempt to decode from JSON, inform about invalid data received
                         try:
-                            self._dm.set_data(**loads(data))
+                            dm.set_data(**loads(data))
                         except JSONDecodeError:
                             print("Received invalid data: {}".format(data))
 
