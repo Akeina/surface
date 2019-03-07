@@ -38,13 +38,16 @@ Kacper Florianski
 
 """
 
+from diskcache import FanoutCache
+
 
 class DataManager:
 
     def __init__(self):
 
-        # Initialise the data dictionary
-        self._data = dict()
+        # Initialise the data cache
+        self._data = FanoutCache("data_manager.cache")
+        self._data.clear()
 
         # Create a set of keys matching data which should be sent over the network
         self._transmission_keys = {
@@ -61,7 +64,7 @@ class DataManager:
                    {key: self._data[key] for key in self._transmission_keys if key in self._data}
 
         # Return selected data or whole dictionary if no args passed
-        return {key: self._data[key] for key in args} if args else self._data
+        return {key: self._data[key] for key in args} if args else {key: self._data[key] for key in self._data}
 
     def set(self, **kwargs):
 
