@@ -15,11 +15,9 @@ case of data loss.
 
 ** Example **
 
-The data manager will be referred to as 'dm'.
-
 Let ip be 169.254.147.140 and port 50000. To connect with the Raspberry Pi at the given address, call:
 
-    connection = Connection(dm, ip=169.254.147.140)
+    connection = Connection(ip=169.254.147.140)
 
 The port is 50000 by default, so it's not necessary to explicitly specify it. To connect, call:
 
