@@ -38,6 +38,7 @@ Kacper Florianski
 
 """
 
+# TODO: Possibly replace with Cache (test with full software)
 from diskcache import FanoutCache
 
 
@@ -46,8 +47,7 @@ class DataManager:
     def __init__(self):
 
         # Initialise the data cache
-        self._data = FanoutCache("data_manager.cache")
-        self._data.clear()
+        self._data = FanoutCache("data_manager.cache", shards=2)
 
         # Create a set of keys matching data which should be sent over the network
         self._transmission_keys = {
@@ -72,6 +72,9 @@ class DataManager:
         for key, value in kwargs.items():
             self._data[key] = value
 
+    def clear(self):
+        self._data.clear()
+
 
 # Create a closure for the data manager
 def _init_manager():
@@ -87,8 +90,11 @@ def _init_manager():
     def set_data(**kwargs):
         return d.set(**kwargs)
 
-    return get_data, set_data
+    def clear():
+        d.clear()
+
+    return get_data, set_data, clear
 
 
 # Create globally accessible functions to manage the data
-get_data, set_data = _init_manager()
+get_data, set_data, clear = _init_manager()
