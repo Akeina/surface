@@ -55,6 +55,9 @@ class Connection:
         # Initialise the delay constant to offload some computing power when reconnecting
         self._RECONNECT_DELAY = 1
 
+        # Initialise the communication delay
+        self._COMMUNICATION_DELAY = 0.05
+
     def connect(self):
 
         # Start the process (to not block the main execution)
@@ -121,6 +124,9 @@ class Connection:
                             dm.set_data(**loads(data))
                         except JSONDecodeError:
                             print("Received invalid data: {}".format(data))
+
+                    # Delay the communication
+                    sleep(self._COMMUNICATION_DELAY)
 
                 # Cleanup
                 self._socket.close()
