@@ -39,17 +39,15 @@ the controller data and lets you access it through multiple fields. A complete l
     button_select
     button_start
 
-In addition, you can change the constant values of axis' and triggers' min max, to adjust the expected output values. In
-order to update the data manager with a certain value, adjust the '_create_data_manager_keys' method. Remember, you must
-provide both the setter and the getter for the field as well as update the '_keys_to_update' set in such setter.
+In addition, you can change the constant values of axis' and triggers' min/max, to adjust the expected output values. To
+update the data manager, adjust the '_data_manager_map' dictionary, where each key is the value to be set, and each
+value corresponds to the property.
 
 ** Example **
 
-The data manager will be referred to as 'dm'.
-
 To create a controller object, call:
 
-    controller = Controller(dm)
+    controller = Controller()
 
 To start reading input, call:
 
@@ -120,7 +118,6 @@ class Controller:
 
         # Calculate and store the middle value for the axis and the triggers
         self._axis_mid = (self._axis_max + self._axis_min) // 2
-        self._trigger_mid = (self._trigger_max + self._trigger_min) // 2
 
         # Initialise the axis information
         self._left_axis_x = self._axis_mid
@@ -129,8 +126,8 @@ class Controller:
         self._right_axis_y = self._axis_mid
 
         # Initialise the triggers information
-        self._left_trigger = self._trigger_mid
-        self._right_trigger = self._trigger_mid
+        self._left_trigger = 0
+        self._right_trigger = 0
 
         # Initialise the hat information
         self._hat_y = 0
@@ -148,97 +145,8 @@ class Controller:
         self.button_select = False
         self.button_start = False
 
-        # Initialise the event to field mapping
-        self._create_dispatch_keys()
-
-        # Initialise the data manager keys to field mapping
-        self._create_data_manager_keys()
-
-        # Initialise the data manager keys to update
-        self._keys_to_update = set()
-
-        # Initialise the inputs delay (to slow down with reading the data)
-        self._UPDATE_DELAY = 0.01
-
-    @property
-    def left_axis_x(self):
-        return normalise(self._left_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
-
-    @left_axis_x.setter
-    def left_axis_x(self, value):
-        if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._left_axis_x - value) >= self._SENSITIVITY:
-            self._left_axis_x = value
-            self._keys_to_update.add("lax")
-
-    @property
-    def left_axis_y(self):
-        return normalise(self._left_axis_y, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
-
-    @left_axis_y.setter
-    def left_axis_y(self, value):
-        if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._left_axis_y - value) >= self._SENSITIVITY:
-            self._left_axis_y = value
-            self._keys_to_update.add("lay")
-
-    @property
-    def right_axis_x(self):
-        return normalise(self._right_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
-
-    @right_axis_x.setter
-    def right_axis_x(self, value):
-        if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._right_axis_x - value) >= self._SENSITIVITY:
-            self._right_axis_x = value
-            self._keys_to_update.add("rax")
-
-    @property
-    def right_axis_y(self):
-        return normalise(self._right_axis_y, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
-
-    @right_axis_y.setter
-    def right_axis_y(self, value):
-        if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._right_axis_y - value) >= self._SENSITIVITY:
-            self._right_axis_y = value
-            self._keys_to_update.add("ray")
-
-    @property
-    def left_trigger(self):
-        return normalise(self._left_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min, self._trigger_max)
-
-    @left_trigger.setter
-    def left_trigger(self, value):
-        self._left_trigger = value
-        self._keys_to_update.add("lt")
-
-    @property
-    def right_trigger(self):
-        return normalise(self._right_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min, self._trigger_max)
-
-    @right_trigger.setter
-    def right_trigger(self, value):
-        self._right_trigger = value
-        self._keys_to_update.add("rt")
-
-    @property
-    def hat_x(self):
-        return self._hat_x
-
-    @hat_x.setter
-    def hat_x(self, value):
-        self._hat_x = value
-        self._keys_to_update.add("hx")
-
-    @property
-    def hat_y(self):
-        return self._hat_y
-
-    @hat_y.setter
-    def hat_y(self, value):
-        self._hat_y = value*(-1)
-        self._keys_to_update.add("hy")
-
-    def _create_dispatch_keys(self):
-
-        self._dispatch_keys = {
+        # Initialise the event to attribute mapping
+        self._dispatch_map = {
             "ABS_X": "left_axis_x",
             "ABS_Y": "left_axis_y",
             "ABS_RX": "right_axis_x",
@@ -259,9 +167,8 @@ class Controller:
             "BTN_SELECT": "button_start"
         }
 
-    def _create_data_manager_keys(self):
-
-        self._data_manager_keys = {
+        # Initialise the data manager key to attribute mapping
+        self._data_manager_map = {
             "lax": "left_axis_x",
             "lay": "left_axis_y",
             "rax": "right_axis_x",
@@ -272,21 +179,98 @@ class Controller:
             "hy": "hat_y",
         }
 
+        # Create a separate set of the transmission keys, for performance reasons
+        self._transmission_keys = set(self._data_manager_map.keys())
+
+        # Update the initial values
+        self._tick_update_data()
+
+        # Initialise the inputs delay (to slow down with writing the data)
+        self._UPDATE_DELAY = 0.05
+
+    @property
+    def left_axis_x(self):
+        return normalise(self._left_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+
+    @left_axis_x.setter
+    def left_axis_x(self, value):
+        if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._left_axis_x - value) >= self._SENSITIVITY:
+            self._left_axis_x = value
+
+    @property
+    def left_axis_y(self):
+        return normalise(self._left_axis_y, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+
+    @left_axis_y.setter
+    def left_axis_y(self, value):
+        if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._left_axis_y - value) >= self._SENSITIVITY:
+            self._left_axis_y = value
+
+    @property
+    def right_axis_x(self):
+        return normalise(self._right_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+
+    @right_axis_x.setter
+    def right_axis_x(self, value):
+        if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._right_axis_x - value) >= self._SENSITIVITY:
+            self._right_axis_x = value
+
+    @property
+    def right_axis_y(self):
+        return normalise(self._right_axis_y, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+
+    @right_axis_y.setter
+    def right_axis_y(self, value):
+        if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._right_axis_y - value) >= self._SENSITIVITY:
+            self._right_axis_y = value
+
+    @property
+    def left_trigger(self):
+        return normalise(self._left_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min, self._trigger_max)
+
+    @left_trigger.setter
+    def left_trigger(self, value):
+        self._left_trigger = value
+
+    @property
+    def right_trigger(self):
+        return normalise(self._right_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min, self._trigger_max)
+
+    @right_trigger.setter
+    def right_trigger(self, value):
+        self._right_trigger = value
+
+    @property
+    def hat_x(self):
+        return self._hat_x
+
+    @hat_x.setter
+    def hat_x(self, value):
+        self._hat_x = value
+
+    @property
+    def hat_y(self):
+        return self._hat_y
+
+    @hat_y.setter
+    def hat_y(self, value):
+        self._hat_y = value*(-1)
+
     def _dispatch_event(self, event):
 
         # Check if a registered event was passed
-        if event.code in self._dispatch_keys:
+        if event.code in self._dispatch_map:
 
             # Update the corresponding value
-            self.__setattr__(self._dispatch_keys[event.code], event.state)
+            self.__setattr__(self._dispatch_map[event.code], event.state)
 
     def _tick_update_data(self):
 
         # Iterate over all keys that should be updated (use copy of the set to avoid runtime concurrency errors)
-        for key in self._keys_to_update.copy():
+        for key in self._transmission_keys:
 
             # Update the corresponding value
-            dm.set_data(**{key: self.__getattribute__(self._data_manager_keys[key])})
+            dm.set_data(**{key: self.__getattribute__(self._data_manager_map[key])})
 
     def _update_data(self):
 
