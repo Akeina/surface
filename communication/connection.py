@@ -33,7 +33,10 @@ import socket
 import communication.data_manager as dm
 from json import loads, dumps, JSONDecodeError
 from time import sleep
-from multiprocessing import Process
+from pathos import helpers
+
+# Fetch the Process class
+Process = helpers.mp.Process
 
 
 class Connection:

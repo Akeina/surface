@@ -47,7 +47,7 @@ class DataManager:
     def __init__(self):
 
         # Initialise the data cache
-        self._data = FanoutCache("data_manager.cache", shards=2)
+        self._data = FanoutCache("cache", shards=4)
 
         # Create a set of keys matching data which should be sent over the network
         self._transmission_keys = {
@@ -90,6 +90,7 @@ def _init_manager():
     def set_data(**kwargs):
         return d.set(**kwargs)
 
+    # Inner function to clear the cache
     def clear():
         d.clear()
 

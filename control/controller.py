@@ -63,6 +63,10 @@ import communication.data_manager as dm
 from threading import Thread
 from inputs import devices
 from time import time
+from pathos import helpers
+
+# Fetch the Process class
+Process = helpers.mp.Process
 
 
 def normalise(value, current_min, current_max, intended_min, intended_max):
@@ -180,7 +184,7 @@ class Controller:
         }
 
         # Create a separate set of the transmission keys, for performance reasons
-        self._transmission_keys = set(self._data_manager_map.keys())
+        self._transmission_keys = set(self._data_manager_map.keys()).copy()
 
         # Update the initial values
         self._tick_update_data()
