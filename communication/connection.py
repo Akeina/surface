@@ -104,11 +104,11 @@ class Connection:
 
                         # If 0-byte was received, close the connection
                         if not data:
+                            sleep(self._RECONNECT_DELAY)
                             break
 
-                    except ConnectionResetError:
-                        break
-                    except ConnectionAbortedError:
+                    except (ConnectionResetError, ConnectionAbortedError):
+                        sleep(self._RECONNECT_DELAY)
                         break
 
                     # Convert bytes to string, remove white spaces, ignore invalid data
@@ -136,9 +136,6 @@ class Connection:
                 # Inform that the connection is closed
                 print("Connection to {}:{} closed successfully".format(self._ip, self._port))
 
-            except ConnectionRefusedError:
-                continue
-            except OSError:
-                # Reconnect in case of host socket loss (e.g. Ethernet unplugged)
+            except (ConnectionRefusedError, OSError):
                 sleep(self._RECONNECT_DELAY)
                 continue
