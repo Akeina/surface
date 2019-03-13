@@ -183,8 +183,8 @@ class Controller:
             "hy": "hat_y",
         }
 
-        # Create a separate set of the transmission keys, for performance reasons
-        self._transmission_keys = set(self._data_manager_map.keys()).copy()
+        # Create a separate set of the data manager keys, for performance reasons
+        self._data_manager_keys = set(self._data_manager_map.keys()).copy()
 
         # Update the initial values
         self._tick_update_data()
@@ -271,7 +271,7 @@ class Controller:
     def _tick_update_data(self):
 
         # Iterate over all keys that should be updated (use copy of the set to avoid runtime concurrency errors)
-        for key in self._transmission_keys:
+        for key in self._data_manager_keys:
 
             # Update the corresponding value
             dm.set_data(**{key: self.__getattribute__(self._data_manager_map[key])})
