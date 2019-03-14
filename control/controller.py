@@ -106,15 +106,15 @@ class Controller:
         self._AXIS_MIN = -32768
 
         # Initialise the axis goal values
-        self._axis_max = 2000
-        self._axis_min = -2000
+        self._axis_max = 400
+        self._axis_min = -400
 
         # Initialise the axis hardware values
         self._TRIGGER_MAX = 255
         self._TRIGGER_MIN = 0
 
         # Initialise the axis goal values
-        self._trigger_max = 255
+        self._trigger_max = 400
         self._trigger_min = 0
 
         # Declare the sensitivity level (when to update the axis value), smaller value for higher sensitivity
@@ -149,6 +149,16 @@ class Controller:
         self.button_select = False
         self.button_start = False
 
+        # Initialise thruster PWM outputs
+        self.thruster_FP = 1500
+        self.thruster_FS = 1500
+        self.thruster_AP = 1500
+        self.thruster_AS = 1500
+        self.thruster_TFP = 1500
+        self.thruster_TFS = 1500
+        self.thruster_TAP = 1500
+        self.thruster_TAS = 1500
+
         # Initialise the event to attribute mapping
         self._dispatch_map = {
             "ABS_X": "left_axis_x",
@@ -181,6 +191,16 @@ class Controller:
             "rt": "right_trigger",
             "hx": "hat_x",
             "hy": "hat_y",
+            "blb": "button_LB",
+            "brb": "button_RB",
+            "tfs": "thruster_FS",
+            "tfp": "thruster_FP",
+            "tap": "thruster_AP",
+            "tas": "thruster_AS",
+            "ttfp": "thruster_TFP",
+            "ttfs": "thruster_TFS",
+            "ttap": "thruster_TAP",
+            "ttas": "thruster_TAS"
         }
 
         # Create a separate set of the data manager keys, for performance reasons
@@ -268,7 +288,110 @@ class Controller:
             # Update the corresponding value
             self.__setattr__(self._dispatch_map[event.code], event.state)
 
+    def _update_thrusters(self):
+
+        # Values to be added to PWM thruster output
+        t1 = t2 = t3 = t4 = t5 = t6 = t7 = t8 = 0
+
+        # Speed when button pressed. Choose values between 1 and 400.
+        button_speed = 400
+
+        # Forward
+        e = self.right_trigger
+        if e:
+            t1 += e
+            t2 += e
+            t3 += e
+            t4 += e
+
+        # Reverse
+        e = self.left_trigger
+        if e:
+            t1 -= e
+            t2 -= e
+            t3 -= e
+            t4 -= e
+
+        # Yaw rotate
+        e = self.right_axis_x
+        if e:
+            t1 += e
+            t2 -= e
+            t3 += e
+            t4 -= e
+
+        # Translate left
+        e = self.button_X
+        if e:
+            t1 -= e*button_speed
+            t2 += e*button_speed
+            t3 -= e*button_speed
+            t4 += e*button_speed
+
+        # Translate right
+        e = self.button_Y
+        if e:
+            t1 += e*button_speed
+            t2 -= e*button_speed
+            t3 += e*button_speed
+            t4 -= e*button_speed
+
+        # Pitch rotate
+        e = self.left_axis_y
+        if e:
+            t5 += e
+            t6 += e
+            t7 -= e
+            t8 -= e
+
+        # Roll rotate
+        e = self.left_axis_x
+        if e:
+            t5 += e
+            t6 -= e
+            t7 += e
+            t8 -= e
+
+        # Upward
+        e = self.button_RB
+        if e:
+            t5 += e*button_speed
+            t6 += e*button_speed
+            t7 += e*button_speed
+            t8 += e*button_speed
+
+        # Downward
+        e = self.button_LB
+        if e:
+            t5 -= e*button_speed
+            t6 -= e*button_speed
+            t7 -= e*button_speed
+            t8 -= e*button_speed
+
+        # Scale the values down if necessary not to overcome 400
+        t1 = t1 if t1 <= 400 else normalise(t1, 0, t1, 0, 400)
+        t2 = t2 if t2 <= 400 else normalise(t2, 0, t2, 0, 400)
+        t3 = t3 if t3 <= 400 else normalise(t3, 0, t3, 0, 400)
+        t4 = t4 if t4 <= 400 else normalise(t4, 0, t4, 0, 400)
+        t5 = t5 if t5 <= 400 else normalise(t5, 0, t5, 0, 400)
+        t6 = t6 if t6 <= 400 else normalise(t6, 0, t6, 0, 400)
+        t7 = t7 if t7 <= 400 else normalise(t7, 0, t7, 0, 400)
+        t8 = t8 if t8 <= 400 else normalise(t8, 0, t8, 0, 400)
+
+        # Update the thruster PWM output
+        self.thruster_FP = 1500 + t1
+        self.thruster_FS = 1500 + t2
+        self.thruster_AP = 1500 + t3
+        self.thruster_AS = 1500 + t4
+        self.thruster_TFP = 1500 + t5
+        self.thruster_TFS = 1500 + t6
+        self.thruster_TAP = 1500 + t7
+        self.thruster_TAS = 1500 + t8
+
     def _tick_update_data(self):
+        
+        # Map joystick events to thruster PWM thruster output
+        self._update_thrusters()
 
         # Iterate over all keys that should be updated (use copy of the set to avoid runtime concurrency errors)
         for key in self._data_manager_keys:
