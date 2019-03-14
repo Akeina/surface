@@ -325,16 +325,16 @@ class Controller:
         if e:
             t1 -= e*button_speed
             t2 += e*button_speed
-            t3 -= e*button_speed
-            t4 += e*button_speed
+            t3 += e*button_speed
+            t4 -= e*button_speed
 
         # Translate right
         e = self.button_Y
         if e:
             t1 += e*button_speed
             t2 -= e*button_speed
-            t3 += e*button_speed
-            t4 -= e*button_speed
+            t3 -= e*button_speed
+            t4 += e*button_speed
 
         # Pitch rotate
         e = self.left_axis_y
@@ -389,7 +389,7 @@ class Controller:
         self.thruster_TAS = 1500 + t8
 
     def _tick_update_data(self):
-        
+
         # Map joystick events to thruster PWM thruster output
         self._update_thrusters()
 
