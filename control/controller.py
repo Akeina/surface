@@ -369,14 +369,25 @@ class Controller:
             t8 -= e*button_speed
 
         # Scale the values down if necessary not to overcome 400
-        t1 = t1 if t1 <= 400 else normalise(t1, 0, t1, 0, 400)
-        t2 = t2 if t2 <= 400 else normalise(t2, 0, t2, 0, 400)
-        t3 = t3 if t3 <= 400 else normalise(t3, 0, t3, 0, 400)
-        t4 = t4 if t4 <= 400 else normalise(t4, 0, t4, 0, 400)
-        t5 = t5 if t5 <= 400 else normalise(t5, 0, t5, 0, 400)
-        t6 = t6 if t6 <= 400 else normalise(t6, 0, t6, 0, 400)
-        t7 = t7 if t7 <= 400 else normalise(t7, 0, t7, 0, 400)
-        t8 = t8 if t8 <= 400 else normalise(t8, 0, t8, 0, 400)
+        # t1 = t1 if t1 <= 400 else normalise(t1, 0, t1, 0, 400)
+        # t2 = t2 if t2 <= 400 else normalise(t2, 0, t2, 0, 400)
+        # t3 = t3 if t3 <= 400 else normalise(t3, 0, t3, 0, 400)
+        # t4 = t4 if t4 <= 400 else normalise(t4, 0, t4, 0, 400)
+        # t5 = t5 if t5 <= 400 else normalise(t5, 0, t5, 0, 400)
+        # t6 = t6 if t6 <= 400 else normalise(t6, 0, t6, 0, 400)
+        # t7 = t7 if t7 <= 400 else normalise(t7, 0, t7, 0, 400)
+        # t8 = t8 if t8 <= 400 else normalise(t8, 0, t8, 0, 400)
+
+        # TODO: Find out proper scaling for thrusters. Right now the output value saturates at 1900 when exceeded.
+        # Saturates value at 400 when exceeded. Code equivalent to above.
+        t1 = t1 if t1 < 400 else 400
+        t2 = t2 if t2 < 400 else 400
+        t3 = t3 if t3 < 400 else 400
+        t4 = t4 if t4 < 400 else 400
+        t5 = t5 if t5 < 400 else 400
+        t6 = t6 if t6 < 400 else 400
+        t7 = t7 if t7 < 400 else 400
+        t8 = t8 if t8 < 400 else 400
 
         # Update the thruster PWM output
         self.thruster_FP = 1500 + t1
