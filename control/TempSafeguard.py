@@ -12,7 +12,7 @@ def get_amp_total(thruster_pwms):
 # and  which is an int value representing a second amp limit (above the first) which once
 # exceeded will also cause the top (first 4) thrusters to be scaled down.
 def temp_safe_guard(thruster_pwms):
-    amp_limit = 21
+    amp_limit = 100
 
     if get_amp_total(thruster_pwms) <= amp_limit:
         return thruster_pwms
