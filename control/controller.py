@@ -43,6 +43,19 @@ In addition, you can change the constant values of axis' and triggers' min/max, 
 update the data manager, adjust the '_data_manager_map' dictionary, where each key is the value to be set, and each
 value corresponds to the property.
 
+On top of acquiring the information about the controller, thrusters PWM outputs are provided. Precisely:
+
+    thruster_fp
+    thruster_fs
+    thruster_ap
+    thruster_as
+    thruster_tfp
+    thruster_tfs
+    thruster_tap
+    thruster_tas
+
+To change their behaviour, you should modify the '_register_thrusters' function, and all its sub-functions.
+
 ** Example **
 
 To create a controller object, call:
@@ -327,7 +340,7 @@ class Controller:
         def _update_thruster_tas(self):
             return 0
 
-        # Initialise the thrusters' values
+        # Register the thrusters as the properties
         self.__class__.thruster_fp = property(_update_thruster_fp)
         self.__class__.thruster_fs = property(_update_thruster_fs)
         self.__class__.thruster_ap = property(_update_thruster_ap)
@@ -337,7 +350,7 @@ class Controller:
         self.__class__.thruster_tap = property(_update_thruster_tap)
         self.__class__.thruster_tas = property(_update_thruster_tas)
 
-        # Append all the properties to the data manager
+        # Update the data manager with the new properties
         self._data_manager_map["Thr_FP"] = "thruster_fp"
         self._data_manager_map["Thr_FS"] = "thruster_fs"
         self._data_manager_map["Thr_AP"] = "thruster_ap"
