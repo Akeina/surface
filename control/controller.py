@@ -148,9 +148,7 @@ class Controller:
         self._hat_x = 0
 
         self.idle = normalise(0, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
-        self.button_speed = self._axis_max - self.idle
-        self.button_negative = self.idle - self.button_speed
-        self.button_positive = self.idle + self.button_speed
+        self.button_speed = 400
 
         # Initialise the buttons information
         self.button_A = False
@@ -248,7 +246,7 @@ class Controller:
 
     @property
     def left_trigger(self):
-        return normalise(self._left_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min, self._axis_min)
+        return normalise(self._left_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min, 2 * self._trigger_min - self._trigger_max)
 
     @left_trigger.setter
     def left_trigger(self, value):
@@ -329,9 +327,9 @@ class Controller:
             elif self.right_axis_x != self.idle:
                 return self.right_axis_x
             elif self.button_X:
-                return self.button_X * self.button_negative
+                return self.idle - self.button_speed
             elif self.button_Y:
-                return self.button_Y * self.button_positive
+                return self.idle + self.button_speed
             else:
                 return self.idle
 
@@ -343,9 +341,9 @@ class Controller:
             elif self.right_axis_x != self.idle:
                 return normalise(self.right_axis_x, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
             elif self.button_X:
-                return self.button_X * self.button_positive
+                return self.idle + self.button_speed
             elif self.button_Y:
-                return self.button_Y * self.button_negative
+                return self.idle - self.button_speed
             else:
                 return self.idle
 
@@ -358,9 +356,9 @@ class Controller:
             elif self.left_trigger != self.idle:
                 return self.left_trigger
             elif self.button_X:
-                return self.button_X * self.button_positive
+                return self.idle + self.button_speed
             elif self.button_Y:
-                return self.button_Y * self.button_negative
+                return self.idle - self.button_speed
             else:
                 return self.idle
 
@@ -372,17 +370,17 @@ class Controller:
             elif self.left_trigger != self.idle:
                 return self.left_trigger
             elif self.button_X:
-                return self.button_X * self.button_negative
+                return self.idle - self.button_speed
             elif self.button_Y:
-                return self.button_Y * self.button_positive
+                return self.idle + self.button_speed
             else:
                 return self.idle
 
         def _update_thruster_tfp(self):
             if self.button_RB:
-                return self.button_RB * self.button_positive
+                return self.idle + self.button_speed
             elif self.button_LB:
-                return self.button_LB * self.button_negative
+                return self.idle - self.button_speed
             elif self.left_axis_y != self.idle:
                 return self.left_axis_y
             elif self.left_axis_x != self.idle:
@@ -392,9 +390,9 @@ class Controller:
 
         def _update_thruster_tfs(self):
             if self.button_RB:
-                return self.button_RB * self.button_positive
+                return self.idle + self.button_speed
             elif self.button_LB:
-                return self.button_LB * self.button_negative
+                return self.idle - self.button_speed
             elif self.left_axis_y != self.idle:
                 return self.left_axis_y
             elif self.left_axis_x != self.idle:
@@ -404,9 +402,9 @@ class Controller:
 
         def _update_thruster_tap(self):
             if self.button_RB:
-                return self.button_RB * self.button_positive
+                return self.idle + self.button_speed
             elif self.button_LB:
-                return self.button_LB * self.button_negative
+                return self.idle - self.button_speed
             elif self.left_axis_y != self.idle:
                 return normalise(self.left_axis_y, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
             elif self.left_axis_x != self.idle:
@@ -416,9 +414,9 @@ class Controller:
 
         def _update_thruster_tas(self):
             if self.button_RB:
-                return self.button_RB * self.button_positive
+                return self.idle + self.button_speed
             elif self.button_LB:
-                return self.button_LB * self.button_negative
+                return self.idle - self.button_speed
             elif self.left_axis_y != self.idle:
                 return normalise(self.left_axis_y, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
             elif self.left_axis_x != self.idle:
