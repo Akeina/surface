@@ -43,6 +43,19 @@ In addition, you can change the constant values of axis' and triggers' min/max, 
 update the data manager, adjust the '_data_manager_map' dictionary, where each key is the value to be set, and each
 value corresponds to the property.
 
+On top of acquiring the information about the controller, thrusters PWM outputs are provided. Precisely:
+
+    thruster_fp
+    thruster_fs
+    thruster_ap
+    thruster_as
+    thruster_tfp
+    thruster_tfs
+    thruster_tap
+    thruster_tas
+
+To change their behaviour, you should modify the '_register_thrusters' function, and all its sub-functions.
+
 ** Example **
 
 To create a controller object, call:
@@ -106,28 +119,25 @@ class Controller:
         self._AXIS_MIN = -32768
 
         # Initialise the axis goal values
-        self._axis_max = 400
-        self._axis_min = -400
+        self._axis_max = 1900
+        self._axis_min = 1100
 
         # Initialise the axis hardware values
         self._TRIGGER_MAX = 255
         self._TRIGGER_MIN = 0
 
         # Initialise the axis goal values
-        self._trigger_max = 400
-        self._trigger_min = 0
+        self._trigger_max = 1900
+        self._trigger_min = 1500
 
         # Declare the sensitivity level (when to update the axis value), smaller value for higher sensitivity
         self._SENSITIVITY = 100
 
-        # Calculate and store the middle value for the axis and the triggers
-        self._axis_mid = (self._axis_max + self._axis_min) // 2
-
         # Initialise the axis information
-        self._left_axis_x = self._axis_mid
-        self._left_axis_y = self._axis_mid
-        self._right_axis_x = self._axis_mid
-        self._right_axis_y = self._axis_mid
+        self._left_axis_x = 0
+        self._left_axis_y = 0
+        self._right_axis_x = 0
+        self._right_axis_y = 0
 
         # Initialise the triggers information
         self._left_trigger = 0
@@ -136,6 +146,11 @@ class Controller:
         # Initialise the hat information
         self._hat_y = 0
         self._hat_x = 0
+
+        self.idle = normalise(0, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+        self.button_speed = self._axis_max - self.idle
+        self.button_negative = self.idle - self.button_speed
+        self.button_positive = self.idle + self.button_speed
 
         # Initialise the buttons information
         self.button_A = False
@@ -148,16 +163,6 @@ class Controller:
         self.button_right_stick = False
         self.button_select = False
         self.button_start = False
-
-        # Initialise thruster PWM outputs
-        self.thruster_FP = 1500
-        self.thruster_FS = 1500
-        self.thruster_AP = 1500
-        self.thruster_AS = 1500
-        self.thruster_TFP = 1500
-        self.thruster_TFS = 1500
-        self.thruster_TAP = 1500
-        self.thruster_TAS = 1500
 
         # Initialise the event to attribute mapping
         self._dispatch_map = {
@@ -191,17 +196,10 @@ class Controller:
             "rt": "right_trigger",
             "hx": "hat_x",
             "hy": "hat_y",
-            "blb": "button_LB",
-            "brb": "button_RB",
-            "tfs": "thruster_FS",
-            "tfp": "thruster_FP",
-            "tap": "thruster_AP",
-            "tas": "thruster_AS",
-            "ttfp": "thruster_TFP",
-            "ttfs": "thruster_TFS",
-            "ttap": "thruster_TAP",
-            "ttas": "thruster_TAS"
         }
+
+        # Register the thrusters
+        self._register_thrusters()
 
         # Create a separate set of the data manager keys, for performance reasons
         self._data_manager_keys = set(self._data_manager_map.keys()).copy()
@@ -250,7 +248,7 @@ class Controller:
 
     @property
     def left_trigger(self):
-        return normalise(self._left_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min, self._trigger_max)
+        return normalise(self._left_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min, self._axis_min)
 
     @left_trigger.setter
     def left_trigger(self, value):
@@ -288,116 +286,7 @@ class Controller:
             # Update the corresponding value
             self.__setattr__(self._dispatch_map[event.code], event.state)
 
-    def _update_thrusters(self):
-
-        # Initialise values to be added to PWM thruster output
-        t1 = t2 = t3 = t4 = t5 = t6 = t7 = t8 = 0
-
-        # Speed when button pressed. Choose values between 1 and 400.
-        button_speed = 400
-
-        # Forward
-        e = self.right_trigger
-        if e:
-            t1 += e
-            t2 += e
-            t3 += e
-            t4 += e
-
-        # Reverse
-        e = self.left_trigger
-        if e:
-            t1 -= e
-            t2 -= e
-            t3 -= e
-            t4 -= e
-
-        # Yaw rotate
-        e = self.right_axis_x
-        if e:
-            t1 += e
-            t2 -= e
-            t3 += e
-            t4 -= e
-
-        # Translate left
-        e = self.button_X
-        if e:
-            t1 -= e*button_speed
-            t2 += e*button_speed
-            t3 += e*button_speed
-            t4 -= e*button_speed
-
-        # Translate right
-        e = self.button_Y
-        if e:
-            t1 += e*button_speed
-            t2 -= e*button_speed
-            t3 -= e*button_speed
-            t4 += e*button_speed
-
-        # Pitch rotate
-        e = self.left_axis_y
-        if e:
-            t5 += e
-            t6 += e
-            t7 -= e
-            t8 -= e
-
-        # Roll rotate
-        e = self.left_axis_x
-        if e:
-            t5 += e
-            t6 -= e
-            t7 += e
-            t8 -= e
-
-        # Upward
-        e = self.button_RB
-        if e:
-            t5 += e*button_speed
-            t6 += e*button_speed
-            t7 += e*button_speed
-            t8 += e*button_speed
-
-        # Downward
-        e = self.button_LB
-        if e:
-            t5 -= e*button_speed
-            t6 -= e*button_speed
-            t7 -= e*button_speed
-            t8 -= e*button_speed
-
-        # If the maximum absolute value is greater than 400, scale every value down by the same factor so the
-        # maximum was 400 and the rest was proportional to that. Otherwise leave the values unchanged.
-
-        max_abs = max(abs(t1), abs(t2), abs(t3), abs(t4), abs(t5), abs(t6), abs(t7), abs(t8))
-
-        if max_abs > 400:
-            scale_factor = 400 / max_abs
-            t1 = int(t1 * scale_factor)
-            t2 = int(t2 * scale_factor)
-            t3 = int(t3 * scale_factor)
-            t4 = int(t4 * scale_factor)
-            t5 = int(t5 * scale_factor)
-            t6 = int(t6 * scale_factor)
-            t7 = int(t7 * scale_factor)
-            t8 = int(t8 * scale_factor)
-
-        # Update the thruster PWM output
-        self.thruster_FP = 1500 + t1
-        self.thruster_FS = 1500 + t2
-        self.thruster_AP = 1500 + t3
-        self.thruster_AS = 1500 + t4
-        self.thruster_TFP = 1500 + t5
-        self.thruster_TFS = 1500 + t6
-        self.thruster_TAP = 1500 + t7
-        self.thruster_TAS = 1500 + t8
-
     def _tick_update_data(self):
-
-        # Map joystick events to thruster PWM thruster output
-        self._update_thrusters()
 
         # Iterate over all keys that should be updated (use copy of the set to avoid runtime concurrency errors)
         for key in self._data_manager_keys:
@@ -428,6 +317,134 @@ class Controller:
 
             # Distribute the event to a corresponding field
             self._dispatch_event(event)
+
+    def _register_thrusters(self):
+
+        # Create custom functions to update the thrusters
+        def _update_thruster_fp(self):
+            if self.right_trigger != self.idle:
+                return self.right_trigger
+            elif self.left_trigger != self.idle:
+                return self.left_trigger
+            elif self.right_axis_x != self.idle:
+                return self.right_axis_x
+            elif self.button_X:
+                return self.button_X * self.button_negative
+            elif self.button_Y:
+                return self.button_Y * self.button_positive
+            else:
+                return self.idle
+
+        def _update_thruster_fs(self):
+            if self.right_trigger != self.idle:
+                return self.right_trigger
+            elif self.left_trigger != self.idle:
+                return self.left_trigger
+            elif self.right_axis_x != self.idle:
+                return normalise(self.right_axis_x, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
+            elif self.button_X:
+                return self.button_X * self.button_positive
+            elif self.button_Y:
+                return self.button_Y * self.button_negative
+            else:
+                return self.idle
+
+        def _update_thruster_ap(self):
+
+            if self.right_axis_x != self.idle:
+                return self.right_axis_x
+            elif self.right_trigger != self.idle:
+                return self.right_trigger
+            elif self.left_trigger != self.idle:
+                return self.left_trigger
+            elif self.button_X:
+                return self.button_X * self.button_positive
+            elif self.button_Y:
+                return self.button_Y * self.button_negative
+            else:
+                return self.idle
+
+        def _update_thruster_as(self):
+            if self.right_axis_x != self.idle:
+                return normalise(self.right_axis_x, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
+            elif self.right_trigger != self.idle:
+                return self.right_trigger
+            elif self.left_trigger != self.idle:
+                return self.left_trigger
+            elif self.button_X:
+                return self.button_X * self.button_negative
+            elif self.button_Y:
+                return self.button_Y * self.button_positive
+            else:
+                return self.idle
+
+        def _update_thruster_tfp(self):
+            if self.button_RB:
+                return self.button_RB * self.button_positive
+            elif self.button_LB:
+                return self.button_LB * self.button_negative
+            elif self.left_axis_y != self.idle:
+                return self.left_axis_y
+            elif self.left_axis_x != self.idle:
+                return self.left_axis_x
+            else:
+                return self.idle
+
+        def _update_thruster_tfs(self):
+            if self.button_RB:
+                return self.button_RB * self.button_positive
+            elif self.button_LB:
+                return self.button_LB * self.button_negative
+            elif self.left_axis_y != self.idle:
+                return self.left_axis_y
+            elif self.left_axis_x != self.idle:
+                return normalise(self.left_axis_x, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
+            else:
+                return self.idle
+
+        def _update_thruster_tap(self):
+            if self.button_RB:
+                return self.button_RB * self.button_positive
+            elif self.button_LB:
+                return self.button_LB * self.button_negative
+            elif self.left_axis_y != self.idle:
+                return normalise(self.left_axis_y, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
+            elif self.left_axis_x != self.idle:
+                return self.left_axis_x
+            else:
+                return self.idle
+
+        def _update_thruster_tas(self):
+            if self.button_RB:
+                return self.button_RB * self.button_positive
+            elif self.button_LB:
+                return self.button_LB * self.button_negative
+            elif self.left_axis_y != self.idle:
+                return normalise(self.left_axis_y, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
+            elif self.left_axis_x != self.idle:
+                return normalise(self.left_axis_x, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
+            else:
+                return self.idle
+
+        # Register the thrusters as the properties
+        self.__class__.thruster_fp = property(_update_thruster_fp)
+        self.__class__.thruster_fs = property(_update_thruster_fs)
+        self.__class__.thruster_ap = property(_update_thruster_ap)
+        self.__class__.thruster_as = property(_update_thruster_as)
+        self.__class__.thruster_tfp = property(_update_thruster_tfp)
+        self.__class__.thruster_tfs = property(_update_thruster_tfs)
+        self.__class__.thruster_tap = property(_update_thruster_tap)
+        self.__class__.thruster_tas = property(_update_thruster_tas)
+
+        # Update the data manager with the new properties
+        self._data_manager_map["Thr_FP"] = "thruster_fp"
+        self._data_manager_map["Thr_FS"] = "thruster_fs"
+        self._data_manager_map["Thr_AP"] = "thruster_ap"
+        self._data_manager_map["Thr_AS"] = "thruster_as"
+        self._data_manager_map["Thr_TFP"] = "thruster_tfp"
+        self._data_manager_map["Thr_TFS"] = "thruster_tfs"
+        self._data_manager_map["Thr_TAP"] = "thruster_tap"
+        self._data_manager_map["Thr_TAS"] = "thruster_tas"
 
     def init(self):
 
