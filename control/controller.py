@@ -106,28 +106,25 @@ class Controller:
         self._AXIS_MIN = -32768
 
         # Initialise the axis goal values
-        self._axis_max = 2000
-        self._axis_min = -2000
+        self._axis_max = 1900
+        self._axis_min = 1100
 
         # Initialise the axis hardware values
         self._TRIGGER_MAX = 255
         self._TRIGGER_MIN = 0
 
         # Initialise the axis goal values
-        self._trigger_max = 255
-        self._trigger_min = 0
+        self._trigger_max = 1900
+        self._trigger_min = 1500
 
         # Declare the sensitivity level (when to update the axis value), smaller value for higher sensitivity
         self._SENSITIVITY = 100
 
-        # Calculate and store the middle value for the axis and the triggers
-        self._axis_mid = (self._axis_max + self._axis_min) // 2
-
         # Initialise the axis information
-        self._left_axis_x = self._axis_mid
-        self._left_axis_y = self._axis_mid
-        self._right_axis_x = self._axis_mid
-        self._right_axis_y = self._axis_mid
+        self._left_axis_x = 0
+        self._left_axis_y = 0
+        self._right_axis_x = 0
+        self._right_axis_y = 0
 
         # Initialise the triggers information
         self._left_trigger = 0
@@ -182,6 +179,9 @@ class Controller:
             "hx": "hat_x",
             "hy": "hat_y",
         }
+
+        # Register the thrusters
+        self._register_thrusters()
 
         # Create a separate set of the data manager keys, for performance reasons
         self._data_manager_keys = set(self._data_manager_map.keys()).copy()
@@ -299,6 +299,53 @@ class Controller:
 
             # Distribute the event to a corresponding field
             self._dispatch_event(event)
+
+    def _register_thrusters(self):
+
+        # Create custom functions to update the thrusters
+        def _update_thruster_fp(self):
+            return 0
+
+        def _update_thruster_fs(self):
+            return 0
+
+        def _update_thruster_ap(self):
+            return 0
+
+        def _update_thruster_as(self):
+            return 0
+
+        def _update_thruster_tfp(self):
+            return 0
+
+        def _update_thruster_tfs(self):
+            return 0
+
+        def _update_thruster_tap(self):
+            return 0
+
+        def _update_thruster_tas(self):
+            return 0
+
+        # Initialise the thrusters' values
+        self.__class__.thruster_fp = property(_update_thruster_fp)
+        self.__class__.thruster_fs = property(_update_thruster_fs)
+        self.__class__.thruster_ap = property(_update_thruster_ap)
+        self.__class__.thruster_as = property(_update_thruster_as)
+        self.__class__.thruster_tfp = property(_update_thruster_tfp)
+        self.__class__.thruster_tfs = property(_update_thruster_tfs)
+        self.__class__.thruster_tap = property(_update_thruster_tap)
+        self.__class__.thruster_tas = property(_update_thruster_tas)
+
+        # Append all the properties to the data manager
+        self._data_manager_map["Thr_FP"] = "thruster_fp"
+        self._data_manager_map["Thr_FS"] = "thruster_fs"
+        self._data_manager_map["Thr_AP"] = "thruster_ap"
+        self._data_manager_map["Thr_AS"] = "thruster_as"
+        self._data_manager_map["Thr_TFP"] = "thruster_tfp"
+        self._data_manager_map["Thr_TFS"] = "thruster_tfs"
+        self._data_manager_map["Thr_TAP"] = "thruster_tap"
+        self._data_manager_map["Thr_TAS"] = "thruster_tas"
 
     def init(self):
 
