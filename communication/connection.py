@@ -41,6 +41,10 @@ Process = helpers.mp.Process
 
 class Connection:
 
+    # Custom exception to handle data errors
+    class DataError(Exception):
+        pass
+
     def __init__(self, *, ip="localhost", port=50000):
 
         # Initialise the connection process
@@ -63,6 +67,40 @@ class Connection:
 
         # Start the process (to not block the main execution)
         self._connection_process.start()
+
+    def _handle_data(self):
+
+        # Once connected, keep receiving and sending the data, raise exception in case of errors
+        try:
+            # Send current state of the data manager
+            self._socket.sendall(bytes(dumps(dm.get_data(transmit=True)), encoding="utf-8"))
+
+            # Receive the data
+            data = self._socket.recv(4096)
+
+            # If 0-byte was received, raise exception
+            if not data:
+                sleep(self._RECONNECT_DELAY)
+                raise self.DataError
+
+        except (ConnectionResetError, ConnectionAbortedError):
+            sleep(self._RECONNECT_DELAY)
+            raise self.DataError
+
+        # Convert bytes to string, remove white spaces, ignore invalid data
+        try:
+            data = data.decode("utf-8").strip()
+        except UnicodeDecodeError:
+            data = None
+
+        # Handle valid data
+        if data:
+
+            # Attempt to decode from JSON, inform about invalid data received
+            try:
+                dm.set_data(**loads(data))
+            except JSONDecodeError:
+                print("Received invalid data: {}".format(data))
 
     def _connect(self):
         """
@@ -89,42 +127,16 @@ class Connection:
 
                 # Connect to the server
                 self._socket.connect((self._ip, self._port))
-                print("Connected, starting data exchange")
+                print("Connected to {}, starting data exchange".format(self._ip, self._port))
 
                 # Keep exchanging data
                 while True:
 
-                    # Once connected, keep receiving and sending the data, break in case of errors
+                    # Attempt to handle the data, break in case of errors
                     try:
-                        # Send current state of the data manager
-                        self._socket.sendall(bytes(dumps(dm.get_data(transmit=True)), encoding="utf-8"))
-
-                        # Receive the data
-                        data = self._socket.recv(4096)
-
-                        # If 0-byte was received, close the connection
-                        if not data:
-                            sleep(self._RECONNECT_DELAY)
-                            break
-
-                    except (ConnectionResetError, ConnectionAbortedError):
-                        sleep(self._RECONNECT_DELAY)
+                        self._handle_data()
+                    except self.DataError:
                         break
-
-                    # Convert bytes to string, remove white spaces, ignore invalid data
-                    try:
-                        data = data.decode("utf-8").strip()
-                    except UnicodeDecodeError:
-                        data = None
-
-                    # Handle valid data
-                    if data:
-
-                        # Attempt to decode from JSON, inform about invalid data received
-                        try:
-                            dm.set_data(**loads(data))
-                        except JSONDecodeError:
-                            print("Received invalid data: {}".format(data))
 
                     # Delay the communication
                     sleep(self._COMMUNICATION_DELAY)
