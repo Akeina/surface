@@ -11,6 +11,7 @@ class VideoStream(Connection):
         # Super TCP data exchange functionality
         super().__init__(ip=ip, port=port)
 
+        # Override the process as a thread to handle the frame correctly
         self._connection_process = Thread(target=self._connect)
 
         # Initialise the frame-end string
