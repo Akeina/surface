@@ -77,11 +77,13 @@ from threading import Thread
 from inputs import devices
 from time import time
 from pathos import helpers
+from numba import jit
 
 # Fetch the Process class
 Process = helpers.mp.Process
 
 
+@jit
 def normalise(value, current_min, current_max, intended_min, intended_max):
     """
 
@@ -147,8 +149,11 @@ class Controller:
         self._hat_y = 0
         self._hat_x = 0
 
+        # Initialise the idle value (default PWM output)
         self.idle = normalise(0, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
-        self.button_speed = 400
+
+        # Initialise the button sensitivity (higher value for bigger PWM values' changes)
+        self.button_speed = min(400, self._axis_max - self.idle)
 
         # Initialise the buttons information
         self.button_A = False
@@ -246,7 +251,8 @@ class Controller:
 
     @property
     def left_trigger(self):
-        return normalise(self._left_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min, 2 * self._trigger_min - self._trigger_max)
+        return normalise(self._left_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX,
+                         self._trigger_min, 2 * self._trigger_min - self._trigger_max)
 
     @left_trigger.setter
     def left_trigger(self, value):
