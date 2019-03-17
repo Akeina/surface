@@ -51,7 +51,7 @@ class DataManager:
 
         # Create a set of keys matching data which should be sent over the network
         self._transmission_keys = {
-            "lax", "lay", "rax", "ray"
+            "tfs", "tfp", "tap", "tas","ttfs", "ttfp", "ttap", "ttas",
         }
 
     def get(self, *args, transmit=False):

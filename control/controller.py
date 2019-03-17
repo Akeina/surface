@@ -147,6 +147,9 @@ class Controller:
         self._hat_y = 0
         self._hat_x = 0
 
+        self.idle = normalise(0, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+        self.button_speed = 400
+
         # Initialise the buttons information
         self.button_A = False
         self.button_B = False
@@ -243,7 +246,7 @@ class Controller:
 
     @property
     def left_trigger(self):
-        return normalise(self._left_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min, self._trigger_max)
+        return normalise(self._left_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min, 2 * self._trigger_min - self._trigger_max)
 
     @left_trigger.setter
     def left_trigger(self, value):
@@ -317,28 +320,109 @@ class Controller:
 
         # Create custom functions to update the thrusters
         def _update_thruster_fp(self):
-            return 0
+            if self.right_trigger != self.idle:
+                return self.right_trigger
+            elif self.left_trigger != self.idle:
+                return self.left_trigger
+            elif self.right_axis_x != self.idle:
+                return self.right_axis_x
+            elif self.button_X:
+                return self.idle - self.button_speed
+            elif self.button_Y:
+                return self.idle + self.button_speed
+            else:
+                return self.idle
 
         def _update_thruster_fs(self):
-            return 0
+            if self.right_trigger != self.idle:
+                return self.right_trigger
+            elif self.left_trigger != self.idle:
+                return self.left_trigger
+            elif self.right_axis_x != self.idle:
+                return 2 * self.idle - self.right_axis_x
+            elif self.button_X:
+                return self.idle + self.button_speed
+            elif self.button_Y:
+                return self.idle - self.button_speed
+            else:
+                return self.idle
 
         def _update_thruster_ap(self):
-            return 0
+
+            if self.right_axis_x != self.idle:
+                return self.right_axis_x
+            elif self.right_trigger != self.idle:
+                return self.right_trigger
+            elif self.left_trigger != self.idle:
+                return self.left_trigger
+            elif self.button_X:
+                return self.idle + self.button_speed
+            elif self.button_Y:
+                return self.idle - self.button_speed
+            else:
+                return self.idle
 
         def _update_thruster_as(self):
-            return 0
+            if self.right_axis_x != self.idle:
+                return 2 * self.idle - self.right_axis_x
+            elif self.right_trigger != self.idle:
+                return self.right_trigger
+            elif self.left_trigger != self.idle:
+                return self.left_trigger
+            elif self.button_X:
+                return self.idle - self.button_speed
+            elif self.button_Y:
+                return self.idle + self.button_speed
+            else:
+                return self.idle
 
         def _update_thruster_tfp(self):
-            return 0
+            if self.button_RB:
+                return self.idle + self.button_speed
+            elif self.button_LB:
+                return self.idle - self.button_speed
+            elif self.left_axis_y != self.idle:
+                return self.left_axis_y
+            elif self.left_axis_x != self.idle:
+                return self.left_axis_x
+            else:
+                return self.idle
 
         def _update_thruster_tfs(self):
-            return 0
+            if self.button_RB:
+                return self.idle + self.button_speed
+            elif self.button_LB:
+                return self.idle - self.button_speed
+            elif self.left_axis_y != self.idle:
+                return self.left_axis_y
+            elif self.left_axis_x != self.idle:
+                return 2 * self.idle - self.left_axis_y
+            else:
+                return self.idle
 
         def _update_thruster_tap(self):
-            return 0
+            if self.button_RB:
+                return self.idle + self.button_speed
+            elif self.button_LB:
+                return self.idle - self.button_speed
+            elif self.left_axis_y != self.idle:
+                return 2 * self.idle - self.left_axis_y
+            elif self.left_axis_x != self.idle:
+                return self.left_axis_x
+            else:
+                return self.idle
 
         def _update_thruster_tas(self):
-            return 0
+            if self.button_RB:
+                return self.idle + self.button_speed
+            elif self.button_LB:
+                return self.idle - self.button_speed
+            elif self.left_axis_y != self.idle:
+                return 2 * self.idle - self.left_axis_y
+            elif self.left_axis_x != self.idle:
+                return 2 * self.idle - self.left_axis_x
+            else:
+                return self.idle
 
         # Register the thrusters as the properties
         self.__class__.thruster_fp = property(_update_thruster_fp)
