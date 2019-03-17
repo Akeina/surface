@@ -339,7 +339,7 @@ class Controller:
             elif self.left_trigger != self.idle:
                 return self.left_trigger
             elif self.right_axis_x != self.idle:
-                return normalise(self.right_axis_x, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
+                return 2 * self.idle - self.right_axis_x
             elif self.button_X:
                 return self.idle + self.button_speed
             elif self.button_Y:
@@ -364,7 +364,7 @@ class Controller:
 
         def _update_thruster_as(self):
             if self.right_axis_x != self.idle:
-                return normalise(self.right_axis_x, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
+                return 2 * self.idle - self.right_axis_x
             elif self.right_trigger != self.idle:
                 return self.right_trigger
             elif self.left_trigger != self.idle:
@@ -396,7 +396,7 @@ class Controller:
             elif self.left_axis_y != self.idle:
                 return self.left_axis_y
             elif self.left_axis_x != self.idle:
-                return normalise(self.left_axis_x, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
+                return 2 * self.idle - self.left_axis_y
             else:
                 return self.idle
 
@@ -406,7 +406,7 @@ class Controller:
             elif self.button_LB:
                 return self.idle - self.button_speed
             elif self.left_axis_y != self.idle:
-                return normalise(self.left_axis_y, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
+                return 2 * self.idle - self.left_axis_y
             elif self.left_axis_x != self.idle:
                 return self.left_axis_x
             else:
@@ -418,9 +418,9 @@ class Controller:
             elif self.button_LB:
                 return self.idle - self.button_speed
             elif self.left_axis_y != self.idle:
-                return normalise(self.left_axis_y, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
+                return 2 * self.idle - self.left_axis_y
             elif self.left_axis_x != self.idle:
-                return normalise(self.left_axis_x, self._axis_min, self._axis_max, self._axis_max, self._axis_min)
+                return 2 * self.idle - self.left_axis_x
             else:
                 return self.idle
 
