@@ -147,8 +147,20 @@ class Controller:
         self._hat_y = 0
         self._hat_x = 0
 
+        # Initialise PWM idle output
         self.idle = normalise(0, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+
+        # Speed when button pressed
         self.button_speed = 400
+        self.servo_speed = 20
+
+        # Initialise servo extreme positions
+        self._servo_max = 1900
+        self._servo_min = 1100
+
+        # Initialise servo and servo-like starting positions
+        self._arm_servo = 1500      # 1500 - middle position
+        self._lamp_brightness = 1100     # 1100 - off; 1900 - full brightness
 
         # Initialise the buttons information
         self.button_A = False
@@ -195,6 +207,9 @@ class Controller:
             "hx": "hat_x",
             "hy": "hat_y",
         }
+
+        # Handle non-thruster joystick controls
+        self._non_thruster_controls()
 
         # Register the thrusters
         self._register_thrusters()
@@ -315,6 +330,35 @@ class Controller:
 
             # Distribute the event to a corresponding field
             self._dispatch_event(event)
+
+    def _non_thruster_controls(self):
+
+        def _update_arm_servo(self):
+            if self.hat_x == 1 and self._arm_servo < self._servo_max:
+                self._arm_servo += self.servo_speed
+            elif self.hat_x == -1 and self._arm_servo > self._servo_min:
+                self._arm_servo -= self.servo_speed
+            return self._arm_servo
+
+        def _update_arm_gripper(self):
+            if self.hat_y:
+                return self.idle + self.hat_y * self.button_speed
+            return self.idle
+
+        def _update_lamp_brightness(self):
+            if self.button_B:
+                if self._lamp_brightness >= self._servo_max:
+                    self._lamp_brightness = self._servo_min
+                self._lamp_brightness += self.servo_speed
+            return self._lamp_brightness
+
+        self.__class__.arm_servo = property(_update_arm_servo)
+        self.__class__.arm_gripper = property(_update_arm_gripper)
+        self.__class__.lamp_brightness = property(_update_lamp_brightness)
+
+        self._data_manager_map["Mot_R"] = "arm_servo"
+        self._data_manager_map["Mot_G"] = "arm_gripper"
+        self._data_manager_map["LED_M"] = "lamp_brightness"
 
     def _register_thrusters(self):
 
