@@ -155,12 +155,23 @@ class Controller:
         self.servo_speed = 20
 
         # Initialise servo extreme positions
-        self._servo_max = 1900
-        self._servo_min = 1100
+        self._SERVO_MAX = 1900
+        self._SERVO_MIN = 1100
 
-        # Initialise servo and servo-like starting positions
+        # Initialise servo and servo-like LED starting positions
         self._arm_servo = 1500      # 1500 - middle position
         self._lamp_brightness = 1100     # 1100 - off; 1900 - full brightness
+
+        # Generate a region of self._lamp_brightness below self._SERVO_MIN and above self._SERVO_MAX.
+        # This is to make easier to turn off the lamp and keep it at full brightness.
+        self._lamp_extended_range = 200
+        self._lamp_min = self._SERVO_MIN - self._lamp_extended_range
+        self._lamp_max = self._SERVO_MAX + self._lamp_extended_range
+
+        # Initialise controller stick deadzone
+        self._deadzone = 0.15       # Deadzone in %
+        self._deadzone_min = int(self.idle - (self._axis_max - self.idle) * self._deadzone)
+        self._deadzone_max = int(self.idle + (self._axis_max - self.idle) * self._deadzone)
 
         # Initialise the buttons information
         self.button_A = False
@@ -225,7 +236,8 @@ class Controller:
 
     @property
     def left_axis_x(self):
-        return normalise(self._left_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+        value = normalise(self._left_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+        return value if value < self._deadzone_min or value > self._deadzone_max else self.idle
 
     @left_axis_x.setter
     def left_axis_x(self, value):
@@ -234,7 +246,8 @@ class Controller:
 
     @property
     def left_axis_y(self):
-        return normalise(self._left_axis_y, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+        value = normalise(self._left_axis_y, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+        return value if value < self._deadzone_min or value > self._deadzone_max else self.idle
 
     @left_axis_y.setter
     def left_axis_y(self, value):
@@ -243,7 +256,8 @@ class Controller:
 
     @property
     def right_axis_x(self):
-        return normalise(self._right_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+        value = normalise(self._right_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+        return value if value < self._deadzone_min or value > self._deadzone_max else self.idle
 
     @right_axis_x.setter
     def right_axis_x(self, value):
@@ -252,7 +266,8 @@ class Controller:
 
     @property
     def right_axis_y(self):
-        return normalise(self._right_axis_y, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+        value = normalise(self._right_axis_y, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+        return value if value < self._deadzone_min or value > self._deadzone_max else self.idle
 
     @right_axis_y.setter
     def right_axis_y(self, value):
@@ -334,22 +349,24 @@ class Controller:
     def _non_thruster_controls(self):
 
         def _update_arm_servo(self):
-            if self.hat_x == 1 and self._arm_servo < self._servo_max:
+            if self.hat_x == 1 and self._arm_servo < self._SERVO_MAX:
                 self._arm_servo += self.servo_speed
-            elif self.hat_x == -1 and self._arm_servo > self._servo_min:
+            elif self.hat_x == -1 and self._arm_servo > self._SERVO_MIN:
                 self._arm_servo -= self.servo_speed
             return self._arm_servo
 
         def _update_arm_gripper(self):
-            if self.hat_y:
-                return self.idle + self.hat_y * self.button_speed
-            return self.idle
+            return self.idle + self.hat_y * self.button_speed   # Hat can return values: -1, 0, 1
 
         def _update_lamp_brightness(self):
             if self.button_B:
-                if self._lamp_brightness >= self._servo_max:
-                    self._lamp_brightness = self._servo_min
+                if self._lamp_brightness >= self._lamp_max:     # Resets the LED PWM output after reaching maximum
+                    self._lamp_brightness = self._lamp_min
                 self._lamp_brightness += self.servo_speed
+            if self._lamp_brightness < self._SERVO_MIN:
+                return self._SERVO_MIN
+            elif self._lamp_brightness > self._SERVO_MAX:
+                return self._SERVO_MAX
             return self._lamp_brightness
 
         self.__class__.arm_servo = property(_update_arm_servo)
@@ -440,7 +457,7 @@ class Controller:
             elif self.left_axis_y != self.idle:
                 return self.left_axis_y
             elif self.left_axis_x != self.idle:
-                return 2 * self.idle - self.left_axis_y
+                return 2 * self.idle - self.left_axis_x
             else:
                 return self.idle
 
