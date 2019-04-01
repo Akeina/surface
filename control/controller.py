@@ -2,12 +2,18 @@
 
 Controller is used to read and process game pad input.
 
-** Usage **
+** Functionality **
 
-By importing the module you gain access to the class 'Controller', and some additional methods.
+By importing the module you gain access to the class 'Controller', and some additional functions.
 
-You should create an instance of it and use the 'init' function to start reading the input. The class will keep reading
-the controller data and lets you access it through multiple fields. A complete list is as follows:
+You should create an instance of it and use the 'init' function to start reading the input. The class will automatically
+read all controller events and dispatch them to corresponding fields as well as update the data manager if needed.
+
+You should modify the `__init__` function to change any functionality of the class.
+
+** Constants and other values **
+
+The class lets you access the controller's state through multiple fields. A complete list is as follows:
 
 * Axis (ints) *
 
@@ -43,7 +49,9 @@ In addition, you can change the constant values of axis' and triggers' min/max, 
 update the data manager, adjust the '_data_manager_map' dictionary, where each key is the value to be set, and each
 value corresponds to the property.
 
-On top of acquiring the information about the controller, thrusters PWM outputs are provided. Precisely:
+On top of acquiring the information about the controller, PWM outputs are provided. Precisely:
+
+* Thrusters *
 
     thruster_fp
     thruster_fs
@@ -54,7 +62,16 @@ On top of acquiring the information about the controller, thrusters PWM outputs 
     thruster_tap
     thruster_tas
 
-To change their behaviour, you should modify the '_register_thrusters' function, and all its sub-functions.
+* Motors *
+
+    motor_arm
+    motor_gripper
+
+* Light *
+
+    light_brightness
+
+To change their behaviour, you should modify functions like '_register_thrusters', and all its sub-functions.
 
 ** Example **
 
@@ -70,17 +87,17 @@ To start reading input, call:
 
 Kacper Florianski
 
+** Extended by **
+
+Pawel Czaplewski
+
 """
 
 import communication.data_manager as dm
 from threading import Thread
 from inputs import devices
 from time import time
-from pathos import helpers
 from numba import jit
-
-# Fetch the Process class
-Process = helpers.mp.Process
 
 
 @jit
@@ -97,12 +114,32 @@ def normalise(value, current_min, current_max, intended_min, intended_max):
     :return: Normalised value
 
     """
+
     return int(intended_min + (value - current_min) * (intended_max - intended_min) / (current_max - current_min))
 
 
 class Controller:
 
     def __init__(self):
+        """
+
+        Function used to initialise the controller.
+
+        ** Modifications **
+
+            1. Modify the '_axis_max' and '_axis_min' constants to specify the expected axis values.
+
+            2. Modify the '_trigger_max' and '_trigger_min' constants to specify the expected trigger values.
+
+            3. Modify the '_SENSITIVITY' constant to specify how sensitive should the values setting be.
+
+            4. Modify the value in 'button_speed' to specify the quickly should the buttons change the values.
+
+            5. Modify the '_data_manager_map' dictionary to synchronise the controller with the data manager.
+
+            6. Modify the '_UPDATE_DELAY' constant to specify the read delay from the controller.
+
+        """
 
         # Fetch the hardware reference via inputs
         try:
@@ -111,8 +148,7 @@ class Controller:
             print("No game controllers detected.")
             return
 
-        # Initialise the processes / threads
-        # TODO: Change data_thread into Process, fix pickle-related issues (inputs library non-picklable)
+        # Initialise the threads
         self._data_thread = Thread(target=self._update_data)
         self._controller_thread = Thread(target=self._read)
 
@@ -201,8 +237,10 @@ class Controller:
             "hy": "hat_y",
         }
 
-        # Register the thrusters
+        # Register thrusters, motors and the light
         self._register_thrusters()
+        self._register_motors()
+        self._register_light()
 
         # Create a separate set of the data manager keys, for performance reasons
         self._data_manager_keys = set(self._data_manager_map.keys()).copy()
@@ -260,7 +298,8 @@ class Controller:
 
     @property
     def right_trigger(self):
-        return normalise(self._right_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min, self._trigger_max)
+        return normalise(self._right_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min,
+                         self._trigger_max)
 
     @right_trigger.setter
     def right_trigger(self, value):
@@ -280,9 +319,16 @@ class Controller:
 
     @hat_y.setter
     def hat_y(self, value):
-        self._hat_y = value*(-1)
+        self._hat_y = value * (-1)
 
     def _dispatch_event(self, event):
+        """
+
+        Function used to dispatch each controller event into its corresponding value.
+
+        :param event: Controller event
+
+        """
 
         # Check if a registered event was passed
         if event.code in self._dispatch_map:
@@ -291,6 +337,11 @@ class Controller:
             self.__setattr__(self._dispatch_map[event.code], event.state)
 
     def _tick_update_data(self):
+        """
+
+        Function used to update the data manager.
+
+        """
 
         # Iterate over all keys that should be updated (use copy of the set to avoid runtime concurrency errors)
         for key in self._data_manager_keys:
@@ -299,6 +350,11 @@ class Controller:
             dm.set_data(**{key: self.__getattribute__(self._data_manager_map[key])})
 
     def _update_data(self):
+        """
+
+        Function used to periodically update the data manager.
+
+        """
 
         # Initialise the time counter
         timer = time()
@@ -312,6 +368,11 @@ class Controller:
                 timer = time()
 
     def _read(self):
+        """
+
+        Function used to read an event from the controller and dispatch it accordingly.
+
+        """
 
         # Keep reading the input
         while True:
@@ -323,6 +384,13 @@ class Controller:
             self._dispatch_event(event)
 
     def _register_thrusters(self):
+        """
+
+        Function used to associate thruster values with the controller.
+
+        You should modify each sub-function to change how the values are calculated.
+
+        """
 
         # Create custom functions to update the thrusters
         def _update_thruster_fp(self):
@@ -402,7 +470,7 @@ class Controller:
             elif self.left_axis_y != self.idle:
                 return self.left_axis_y
             elif self.left_axis_x != self.idle:
-                return 2 * self.idle - self.left_axis_y
+                return 2 * self.idle - self.left_axis_x
             else:
                 return self.idle
 
@@ -450,7 +518,55 @@ class Controller:
         self._data_manager_map["Thr_TAP"] = "thruster_tap"
         self._data_manager_map["Thr_TAS"] = "thruster_tas"
 
+    def _register_motors(self):
+        """
+
+        Function used to associate motor values with the controller.
+
+        You should modify each sub-function to change how the values are calculated.
+
+        """
+
+        # Create custom functions to update the thrusters
+        def _update_arm(self):
+            return self.idle
+
+        def _update_gripper(self):
+            return self.idle
+
+        # Register the thrusters as the properties
+        self.__class__.motor_arm = property(_update_arm)
+        self.__class__.motor_gripper = property(_update_gripper)
+
+        # Update the data manager with the new properties
+        self._data_manager_map["Mot_R"] = "motor_arm"
+        self._data_manager_map["Mot_G"] = "motor_gripper"
+
+    def _register_light(self):
+        """
+
+        Function used to associate light values with the controller.
+
+        You should modify each sub-function to change how the values are calculated.
+
+        """
+
+        # Create custom functions to update the thrusters
+        def _update_brightness(self):
+            return self.idle
+
+        # Register the thrusters as the properties
+        self.__class__.light_brightness = property(_update_brightness)
+
+        # Update the data manager with the new properties
+        self._data_manager_map["LED_M"] = "light_brightness"
+
     def init(self):
+        """
+
+        Function used to initialise the controller (start reading)
+
+        """
 
         # Check if the controller was correctly created
         if not hasattr(self, "_controller"):
