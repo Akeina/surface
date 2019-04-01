@@ -2,7 +2,7 @@
 
 Connection is used to handle the information exchange with the Raspberry Pi.
 
-** Usage **
+** Functionality **
 
 By importing the module you gain access to the class 'Connection'.
 
@@ -12,6 +12,17 @@ Raspberry Pi. Ip passed should be a string, whereas the port an integer. Both ar
 
 Once connected, the 'Connection' class should handle everything, including formatting, encoding and re-connecting in
 case of data loss.
+
+You should modify the '__init__' function to perform any additional initialisations of the communication.
+
+You should modify the '_connect' function to change the existing ways of exchanging information with Raspberry Pi
+as well as modify behaviour when the connection between surface and the Pi is lost.
+
+You should modify any `_handle_data` functions to change how the data is processed.
+
+** Constants and other values **
+
+All constants and other important values are mentioned and explained within the corresponding functions.
 
 ** Example **
 
@@ -46,6 +57,20 @@ class Connection:
         pass
 
     def __init__(self, *, ip="localhost", port=50000):
+        """
+
+        Function used to initialise the communication.
+
+         ** Modifications **
+
+            1. Modify the '_RECONNECT_DELAY' constant to specify the delay value (seconds) on connection loss.
+
+            2. Modify the '_COMMUNICATION_DELAY' constant to specify the delay value (seconds) on communication.
+
+        :param ip: Raspberry Pi's IP address
+        :param port: Raspberry Pi's port
+
+        """
 
         # Initialise the connection process
         self._connection_process = Process(target=self._connect)
@@ -64,11 +89,25 @@ class Connection:
         self._COMMUNICATION_DELAY = 0.05
 
     def connect(self):
+        """
+
+        Function used to connect with the Pi.
+
+        """
 
         # Start the process (to not block the main execution)
         self._connection_process.start()
 
     def _handle_data(self):
+        """
+
+        Function used to exchange and process the data.
+
+        ** Modifications **
+
+            1. Modify any try, except blocks to change the error-handling (keep in mind to use the DataError exception).
+
+        """
 
         # Once connected, keep receiving and sending the data, raise exception in case of errors
         try:
@@ -105,10 +144,14 @@ class Connection:
     def _connect(self):
         """
 
-        Method used to run a continuous connection with Raspberry Pi.
+        Function used to run a continuous connection with Raspberry Pi.
 
         Runs an infinite loop that performs re-connection to the given address as well as exchanges data with it, via
         blocking send and receive functions. The data exchanged is JSON-encoded.
+
+        ** Modifications **
+
+            1. Modify the bottom try, except block to change non-data-specific error-handling.
 
         """
 
@@ -127,7 +170,7 @@ class Connection:
 
                 # Connect to the server
                 self._socket.connect((self._ip, self._port))
-                print("Connected to {}, starting data exchange".format(self._ip, self._port))
+                print("Connected to {}:{}, starting data exchange".format(self._ip, self._port))
 
                 # Keep exchanging data
                 while True:
