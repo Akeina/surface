@@ -10,11 +10,11 @@ Here is a full list of changes introduced to the system. Naturally, before insta
 2. *Python* libraries installation via `pip`
 3. `OpenCV` installation (pending)
 
-### Python3.6 installation
+### 1. Python3.6 installation
 
 Follow instructions at https://www.python.org/downloads and install `Python3.6.4`
 
-### Python libraries installation via `pip`
+### 2. Python libraries installation via pip
 
 Run the following block of commands:
 
@@ -28,6 +28,6 @@ sudo python3.6 -m pip install numba
 sudo python3.6 -m pip install PySide2
 ```
 
-### OpenCV installation (pending)
+### 3. OpenCV installation (pending)
 
 To be tested.
