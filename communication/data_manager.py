@@ -95,7 +95,8 @@ class DataManager:
             return self._safeguard_transmission_data(*args)
 
         # Return selected data or whole dictionary if no args passed
-        return {key: self._data[key] for key in args} if args else {key: self._data[key] for key in self._data}
+        return {key: self._data[key] for key in args if key in self._data} if args \
+            else {key: self._data[key] for key in self._data}
 
     def set(self, **kwargs):
         """
@@ -167,11 +168,11 @@ class DataManager:
         """
 
         # Fetch selected data or transmission-specific dictionary if no args passed
-        data = {key: self._data[key] for key in args if key in self._transmission_keys} if args else \
-            {key: self._data[key] for key in self._transmission_keys if key in self._data}
+        data = {key: self._data[key] for key in args if key in self._transmission_keys and key in self._data} if args \
+            else {key: self._data[key] for key in self._transmission_keys if key in self._data}
 
         # Select the safeguard data to scale it
-        safeguard_data = {key: data[key] for key in self._SAFEGUARD_KEYS}
+        safeguard_data = {key: data[key] for key in self._SAFEGUARD_KEYS if key in data}
 
         # Calculate how much current would be taken by each value
         amps = {key: self._amp(value) for key, value in safeguard_data.items()}
