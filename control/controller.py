@@ -2,12 +2,18 @@
 
 Controller is used to read and process game pad input.
 
-** Usage **
+** Functionality **
 
-By importing the module you gain access to the class 'Controller', and some additional methods.
+By importing the module you gain access to the class 'Controller', and some additional functions.
 
-You should create an instance of it and use the 'init' function to start reading the input. The class will keep reading
-the controller data and lets you access it through multiple fields. A complete list is as follows:
+You should create an instance of it and use the 'init' function to start reading the input. The class will automatically
+read all controller events and dispatch them to corresponding fields as well as update the data manager if needed.
+
+You should modify the `__init__` function to change any functionality of the class.
+
+** Constants and other values **
+
+The class lets you access the controller's state through multiple fields. A complete list is as follows:
 
 * Axis (ints) *
 
@@ -43,7 +49,9 @@ In addition, you can change the constant values of axis' and triggers' min/max, 
 update the data manager, adjust the '_data_manager_map' dictionary, where each key is the value to be set, and each
 value corresponds to the property.
 
-On top of acquiring the information about the controller, thrusters PWM outputs are provided. Precisely:
+On top of acquiring the information about the controller, PWM outputs are provided. Precisely:
+
+* Thrusters *
 
     thruster_fp
     thruster_fs
@@ -54,7 +62,16 @@ On top of acquiring the information about the controller, thrusters PWM outputs 
     thruster_tap
     thruster_tas
 
-To change their behaviour, you should modify the '_register_thrusters' function, and all its sub-functions.
+* Motors *
+
+    motor_arm
+    motor_gripper
+
+* Light *
+
+    light_brightness
+
+To change their behaviour, you should modify functions like '_register_thrusters', and all its sub-functions.
 
 ** Example **
 
@@ -70,18 +87,20 @@ To start reading input, call:
 
 Kacper Florianski
 
+** Extended by **
+
+Pawel Czaplewski
+
 """
 
 import communication.data_manager as dm
 from threading import Thread
 from inputs import devices
 from time import time
-from pathos import helpers
-
-# Fetch the Process class
-Process = helpers.mp.Process
+from numba import jit
 
 
+@jit
 def normalise(value, current_min, current_max, intended_min, intended_max):
     """
 
@@ -95,12 +114,33 @@ def normalise(value, current_min, current_max, intended_min, intended_max):
     :return: Normalised value
 
     """
+
     return int(intended_min + (value - current_min) * (intended_max - intended_min) / (current_max - current_min))
 
 
 class Controller:
 
     def __init__(self):
+        """
+
+        Function used to initialise the controller.
+
+        ** Modifications **
+
+            1. Modify the '_axis_max' and '_axis_min' constants to specify the expected axis values.
+
+            2. Modify the '_trigger_max' and '_trigger_min' constants to specify the expected trigger values.
+
+            3. Modify the '_SENSITIVITY' constant to specify how sensitive should the values setting be.
+
+            4. Modify the value in 'button_speed' or 'servo_speed' to specify how quickly should the buttons
+            change the values.
+
+            5. Modify the '_data_manager_map' dictionary to synchronise the controller with the data manager.
+
+            6. Modify the '_UPDATE_DELAY' constant to specify the read delay from the controller.
+
+        """
 
         # Fetch the hardware reference via inputs
         try:
@@ -109,8 +149,7 @@ class Controller:
             print("No game controllers detected.")
             return
 
-        # Initialise the processes / threads
-        # TODO: Change data_thread into Process, fix pickle-related issues (inputs library non-picklable)
+        # Initialise the threads
         self._data_thread = Thread(target=self._update_data)
         self._controller_thread = Thread(target=self._read)
 
@@ -147,31 +186,22 @@ class Controller:
         self._hat_y = 0
         self._hat_x = 0
 
-        # Initialise PWM idle output
+        # Initialise the idle value (default PWM output)
         self.idle = normalise(0, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
 
-        # Speed when button pressed
-        self.button_speed = 400
+        # Initialise the button sensitivity (higher value for bigger PWM values' changes)
+        self.button_speed = min(400, self._axis_max - self.idle)
         self.servo_speed = 20
 
-        # Initialise servo extreme positions
-        self._SERVO_MAX = 1900
-        self._SERVO_MIN = 1100
-
         # Initialise servo and servo-like LED starting positions
-        self._arm_servo = 1500      # 1500 - middle position
-        self._lamp_brightness = 1100     # 1100 - off; 1900 - full brightness
+        self._arm_servo = 1500  # 1500 - middle position
+        self._lamp_brightness = 1100  # 1100 - off; 1900 - full brightness
 
-        # Generate a region of self._lamp_brightness below self._SERVO_MIN and above self._SERVO_MAX.
+        # Generate a region of self._lamp_brightness below self._axis_min and above self._axis_max.
         # This is to make easier to turn off the lamp and keep it at full brightness.
         self._lamp_extended_range = 200
-        self._lamp_min = self._SERVO_MIN - self._lamp_extended_range
-        self._lamp_max = self._SERVO_MAX + self._lamp_extended_range
-
-        # Initialise controller stick deadzone
-        self._deadzone = 0.15       # Deadzone in %
-        self._deadzone_min = int(self.idle - (self._axis_max - self.idle) * self._deadzone)
-        self._deadzone_max = int(self.idle + (self._axis_max - self.idle) * self._deadzone)
+        self._lamp_min = self._axis_min - self._lamp_extended_range
+        self._lamp_max = self._axis_max + self._lamp_extended_range
 
         # Initialise the buttons information
         self.button_A = False
@@ -219,11 +249,10 @@ class Controller:
             "hy": "hat_y",
         }
 
-        # Handle non-thruster joystick controls
-        self._non_thruster_controls()
-
-        # Register the thrusters
+        # Register thrusters, motors and the light
         self._register_thrusters()
+        self._register_motors()
+        self._register_light()
 
         # Create a separate set of the data manager keys, for performance reasons
         self._data_manager_keys = set(self._data_manager_map.keys()).copy()
@@ -236,8 +265,7 @@ class Controller:
 
     @property
     def left_axis_x(self):
-        value = normalise(self._left_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
-        return value if value < self._deadzone_min or value > self._deadzone_max else self.idle
+        return normalise(self._left_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
 
     @left_axis_x.setter
     def left_axis_x(self, value):
@@ -246,8 +274,7 @@ class Controller:
 
     @property
     def left_axis_y(self):
-        value = normalise(self._left_axis_y, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
-        return value if value < self._deadzone_min or value > self._deadzone_max else self.idle
+        return normalise(self._left_axis_y, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
 
     @left_axis_y.setter
     def left_axis_y(self, value):
@@ -256,8 +283,7 @@ class Controller:
 
     @property
     def right_axis_x(self):
-        value = normalise(self._right_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
-        return value if value < self._deadzone_min or value > self._deadzone_max else self.idle
+        return normalise(self._right_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
 
     @right_axis_x.setter
     def right_axis_x(self, value):
@@ -266,8 +292,7 @@ class Controller:
 
     @property
     def right_axis_y(self):
-        value = normalise(self._right_axis_y, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
-        return value if value < self._deadzone_min or value > self._deadzone_max else self.idle
+        return normalise(self._right_axis_y, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
 
     @right_axis_y.setter
     def right_axis_y(self, value):
@@ -276,7 +301,8 @@ class Controller:
 
     @property
     def left_trigger(self):
-        return normalise(self._left_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min, 2 * self._trigger_min - self._trigger_max)
+        return normalise(self._left_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX,
+                         self._trigger_min, 2 * self._trigger_min - self._trigger_max)
 
     @left_trigger.setter
     def left_trigger(self, value):
@@ -284,7 +310,8 @@ class Controller:
 
     @property
     def right_trigger(self):
-        return normalise(self._right_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min, self._trigger_max)
+        return normalise(self._right_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min,
+                         self._trigger_max)
 
     @right_trigger.setter
     def right_trigger(self, value):
@@ -304,9 +331,16 @@ class Controller:
 
     @hat_y.setter
     def hat_y(self, value):
-        self._hat_y = value*(-1)
+        self._hat_y = value * (-1)
 
     def _dispatch_event(self, event):
+        """
+
+        Function used to dispatch each controller event into its corresponding value.
+
+        :param event: Controller event
+
+        """
 
         # Check if a registered event was passed
         if event.code in self._dispatch_map:
@@ -315,6 +349,11 @@ class Controller:
             self.__setattr__(self._dispatch_map[event.code], event.state)
 
     def _tick_update_data(self):
+        """
+
+        Function used to update the data manager.
+
+        """
 
         # Iterate over all keys that should be updated (use copy of the set to avoid runtime concurrency errors)
         for key in self._data_manager_keys:
@@ -323,6 +362,11 @@ class Controller:
             dm.set_data(**{key: self.__getattribute__(self._data_manager_map[key])})
 
     def _update_data(self):
+        """
+
+        Function used to periodically update the data manager.
+
+        """
 
         # Initialise the time counter
         timer = time()
@@ -336,6 +380,11 @@ class Controller:
                 timer = time()
 
     def _read(self):
+        """
+
+        Function used to read an event from the controller and dispatch it accordingly.
+
+        """
 
         # Keep reading the input
         while True:
@@ -346,38 +395,14 @@ class Controller:
             # Distribute the event to a corresponding field
             self._dispatch_event(event)
 
-    def _non_thruster_controls(self):
-
-        def _update_arm_servo(self):
-            if self.hat_x == 1 and self._arm_servo < self._SERVO_MAX:
-                self._arm_servo += self.servo_speed
-            elif self.hat_x == -1 and self._arm_servo > self._SERVO_MIN:
-                self._arm_servo -= self.servo_speed
-            return self._arm_servo
-
-        def _update_arm_gripper(self):
-            return self.idle + self.hat_y * self.button_speed   # Hat can return values: -1, 0, 1
-
-        def _update_lamp_brightness(self):
-            if self.button_B:
-                if self._lamp_brightness >= self._lamp_max:     # Resets the LED PWM output after reaching maximum
-                    self._lamp_brightness = self._lamp_min
-                self._lamp_brightness += self.servo_speed
-            if self._lamp_brightness < self._SERVO_MIN:
-                return self._SERVO_MIN
-            elif self._lamp_brightness > self._SERVO_MAX:
-                return self._SERVO_MAX
-            return self._lamp_brightness
-
-        self.__class__.arm_servo = property(_update_arm_servo)
-        self.__class__.arm_gripper = property(_update_arm_gripper)
-        self.__class__.lamp_brightness = property(_update_lamp_brightness)
-
-        self._data_manager_map["Mot_R"] = "arm_servo"
-        self._data_manager_map["Mot_G"] = "arm_gripper"
-        self._data_manager_map["LED_M"] = "lamp_brightness"
-
     def _register_thrusters(self):
+        """
+
+        Function used to associate thruster values with the controller.
+
+        You should modify each sub-function to change how the values are calculated.
+
+        """
 
         # Create custom functions to update the thrusters
         def _update_thruster_fp(self):
@@ -505,7 +530,67 @@ class Controller:
         self._data_manager_map["Thr_TAP"] = "thruster_tap"
         self._data_manager_map["Thr_TAS"] = "thruster_tas"
 
+    def _register_motors(self):
+        """
+
+        Function used to associate motor values with the controller.
+
+        You should modify each sub-function to change how the values are calculated.
+
+        """
+
+        # Create custom functions to update the thrusters
+        def _update_arm(self):      # Servo
+            if self.hat_x == 1 and self._arm_servo < self._axis_max:
+                self._arm_servo += self.servo_speed
+            elif self.hat_x == -1 and self._arm_servo > self._axis_min:
+                self._arm_servo -= self.servo_speed
+            return self._arm_servo
+
+        def _update_gripper(self):
+            return self.idle + self.hat_y * self.button_speed       # Hat can return values: -1, 0, 1
+
+        # Register the thrusters as the properties
+        self.__class__.motor_arm = property(_update_arm)
+        self.__class__.motor_gripper = property(_update_gripper)
+
+        # Update the data manager with the new properties
+        self._data_manager_map["Mot_R"] = "motor_arm"
+        self._data_manager_map["Mot_G"] = "motor_gripper"
+
+    def _register_light(self):
+        """
+
+        Function used to associate light values with the controller.
+
+        You should modify each sub-function to change how the values are calculated.
+
+        """
+
+        # Create custom functions to update the thrusters
+        def _update_brightness(self):
+            if self.button_B:
+                if self._lamp_brightness >= self._lamp_max:  # Resets the LED PWM output after reaching maximum
+                    self._lamp_brightness = self._lamp_min
+                self._lamp_brightness += self.servo_speed
+            if self._lamp_brightness < self._axis_min:
+                return self._axis_max
+            elif self._lamp_brightness > self._axis_max:
+                return self._axis_max
+            return self._lamp_brightness
+
+        # Register the thrusters as the properties
+        self.__class__.light_brightness = property(_update_brightness)
+
+        # Update the data manager with the new properties
+        self._data_manager_map["LED_M"] = "light_brightness"
+
     def init(self):
+        """
+
+        Function used to initialise the controller (start reading)
+
+        """
 
         # Check if the controller was correctly created
         if not hasattr(self, "_controller"):
