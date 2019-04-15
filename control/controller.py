@@ -539,7 +539,7 @@ class Controller:
 
         """
 
-        # Create custom functions to update the thrusters
+        # Create custom functions to update the motors
         def _update_arm(self):      # Servo
             if self.hat_x == 1 and self._arm_servo < self._axis_max:
                 self._arm_servo += self.servo_speed
@@ -550,13 +550,23 @@ class Controller:
         def _update_gripper(self):
             return self.idle + self.hat_y * self.button_speed       # Hat can return values: -1, 0, 1
 
-        # Register the thrusters as the properties
+        def _update_trout(self):
+            if self.button_left_stick:
+                return self.idle - self.button_speed
+            elif self.button_right_stick:
+                return self.idle + self.button_speed
+            else:
+                return self.idle
+
+        # Register the motors as the properties
         self.__class__.motor_arm = property(_update_arm)
         self.__class__.motor_gripper = property(_update_gripper)
+        self.__class__.motor_trout = property(_update_trout)
 
         # Update the data manager with the new properties
         self._data_manager_map["Mot_R"] = "motor_arm"
         self._data_manager_map["Mot_G"] = "motor_gripper"
+        self._data_manager_map["Mot_F"] = "motor_trout"
 
     def _register_light(self):
         """
