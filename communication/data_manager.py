@@ -64,12 +64,12 @@ class DataManager:
         """
 
         # Initialise the data cache
-        self._data = FanoutCache("cache", shards=4)
+        self._data = FanoutCache("cache", shards=8)
 
         # Create a set of keys matching data which should be sent over the network
         self._transmission_keys = {
             "Thr_FP", "Thr_FS", "Thr_AP", "Thr_AS", "Thr_TFP", "Thr_TFS", "Thr_TAP", "Thr_TAS", "Mot_R", "Mot_G",
-            "LED_M"
+            "Mot_F", "LED_M"
         }
 
         # Initialise safeguard-related fields
@@ -137,7 +137,7 @@ class DataManager:
 
         # Initialise the keys to safeguard
         self._SAFEGUARD_KEYS = {
-            "Thr_FP", "Thr_FS", "Thr_AP", "Thr_AS", "Thr_TFP", "Thr_TFS", "Thr_TAP", "Thr_TAS", "Mot_R", "Mot_G",
+            "Thr_FP", "Thr_FS", "Thr_AP", "Thr_AS", "Thr_TFP", "Thr_TFS", "Thr_TAP", "Thr_TAS", "Mot_F", "Mot_G",
         }
 
         # Initialise the current limit
