@@ -2,7 +2,7 @@
 
 Dam is used to provide an abstraction data structure to solve the autonomous driving task.
 
-** Usage **
+** Functionality **
 
 By importing the module you gain access to a number of classes, each representing different components of the dam.
 
@@ -43,6 +43,11 @@ Kacper Florianski
 class Dam:
 
     def __init__(self):
+        """
+
+        Function used to initialise full dam's representation.
+
+        """
 
         # Initialise a list of squares. Indexing is in form (column - 1) + 4*(row - 1)
         self._squares = [Square(i) for i in range(12)]
@@ -56,7 +61,7 @@ class Dam:
     def mark_crack(self, length: float, *, position=None):
         """
 
-        Method used to save the crack onto a grid.
+        Function used to save the crack onto a grid.
 
         :param length: Length of the crack.
         :param position: Grid position. Check indexing in module's docstrings to understand better.
@@ -104,6 +109,13 @@ class Dam:
 class Square:
 
     def __init__(self, position: int):
+        """
+
+        Function used to initialise the dam's grid component.
+
+        :param position: Grid position. Check indexing in module's docstrings to understand better.
+
+        """
 
         # Initialise base
         self.width, self.height = 30, 30
@@ -126,6 +138,13 @@ class Square:
 class Crack:
 
     def __init__(self, length: float):
+        """
+
+        Function used to initialise a crack.
+
+        :param length: Length of the crack
+
+        """
 
         # Declare and initialise variables related to the length of the crack
         self._length, self.LENGTH_MAX, self.LENGTH_MIN = length, 20, 8
@@ -140,7 +159,7 @@ class Crack:
     def _format_length(self):
         """
 
-        Method used to restrict the length by the competition's requirements.
+        Function used to restrict the length by the competition's requirements.
 
         Precisely, the restrictions are on the maximum length, minimum length, and the number of digits after the coma.
 
