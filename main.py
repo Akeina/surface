@@ -49,3 +49,5 @@ if __name__ == "__main__":
     video_stream.connect()
     vs.connect()
     controller.init()
+
+    blocking_test_video_stream([video_stream, vs])

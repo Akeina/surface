@@ -187,6 +187,7 @@ class Controller:
         self._hat_x = 0
 
         # Initialise the idle value (default PWM output)
+        self._idle = normalise(0, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
         self.idle = normalise(0, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
 
         # Initialise the button sensitivity (higher value for bigger PWM values' changes)
@@ -539,7 +540,6 @@ class Controller:
 
         """
 
-<<<<<<< HEAD
         # Create custom functions to update the motors
         def _update_arm(self):      # Servo
             if self.hat_x == 1 and self._arm_servo < self._axis_max:
@@ -563,39 +563,11 @@ class Controller:
         self.__class__.motor_arm = property(_update_arm)
         self.__class__.motor_gripper = property(_update_gripper)
         self.__class__.motor_trout = property(_update_trout)
-=======
-        # Initialise the servo motor position tracking and its rotation speed
-        self._arm_servo = 1500
-        self._arm_servo_speed = 20
-
-        # Create custom functions to update the thrusters
-        def _update_arm(self):
-            if self.hat_x == 1 and self._arm_servo + self._arm_servo_speed <= self._axis_max:
-                self._arm_servo += self._arm_servo_speed
-            elif self.hat_x == -1 and self._arm_servo - self._arm_servo_speed >= self._axis_min:
-                self._arm_servo -= self._arm_servo_speed
-            return self._arm_servo
-
-        def _update_gripper(self):
-            return self._idle + self.hat_y * self._button_sensitivity
-
-        def _update_box(self):
-            return self._idle
-
-        # Register the thrusters as the properties
-        self.__class__.motor_arm = property(_update_arm)
-        self.__class__.motor_gripper = property(_update_gripper)
-        self.__class__.motor_box = property(_update_box)
->>>>>>> master
 
         # Update the data manager with the new properties
         self._data_manager_map["Mot_R"] = "motor_arm"
         self._data_manager_map["Mot_G"] = "motor_gripper"
-<<<<<<< HEAD
         self._data_manager_map["Mot_F"] = "motor_trout"
-=======
-        self._data_manager_map["Mot_F"] = "motor_box"
->>>>>>> master
 
     def _register_light(self):
         """
@@ -606,7 +578,6 @@ class Controller:
 
         """
 
-<<<<<<< HEAD
         # Create custom functions to update the thrusters
         def _update_brightness(self):
             if self.button_B:
@@ -617,18 +588,6 @@ class Controller:
                 return self._axis_max
             elif self._lamp_brightness > self._axis_max:
                 return self._axis_max
-=======
-        # Initialise the LED brightness tracking and its illumination change speed
-        self._lamp_brightness = 1100
-        self._lamp_speed = 50
-
-        # Create custom functions to update the thrusters
-        def _update_brightness(self):
-            if self.button_B and self._lamp_brightness + self._lamp_speed <= self._axis_max:
-                self._lamp_brightness += self._lamp_speed
-            elif self.button_A and self._lamp_brightness - self._lamp_speed >= self._axis_min:
-                self._lamp_brightness -= self._lamp_speed
->>>>>>> master
             return self._lamp_brightness
 
         # Register the thrusters as the properties
