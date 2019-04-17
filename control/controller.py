@@ -481,13 +481,8 @@ class Controller:
                 return self._idle - self._button_sensitivity
             elif self.left_axis_y != self._idle:
                 return self.left_axis_y
-<<<<<<< HEAD
             elif self.left_axis_x != self.idle:
                 return 2 * self.idle - self.left_axis_x
-=======
-            elif self.left_axis_x != self._idle:
-                return 2 * self._idle - self.left_axis_x
->>>>>>> master
             else:
                 return self._idle
 
