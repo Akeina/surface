@@ -86,7 +86,7 @@ class Connection:
         self._RECONNECT_DELAY = 1
 
         # Initialise the communication delay
-        self._COMMUNICATION_DELAY = 0.05
+        self._COMMUNICATION_DELAY = 0.01
 
     def connect(self):
         """
