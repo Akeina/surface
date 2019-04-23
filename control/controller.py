@@ -245,11 +245,14 @@ class Controller:
         # Create a separate set of the data manager keys, for performance reasons
         self._data_manager_keys = set(self._data_manager_map.keys()).copy()
 
+        # Create a separate dict to remember the last state of the values and avoid updating the cache unnecessarily
+        self._data_manager_last_saved = dict()
+
         # Update the initial values
         self._tick_update_data()
 
-        # Initialise the inputs delay (to slow down with writing the data)
-        self._UPDATE_DELAY = 0.03
+        # Initialise the cache delay (to slow down with writing the data)
+        self._UPDATE_DELAY = 0.025
 
     @property
     def left_axis_x(self):
@@ -346,8 +349,15 @@ class Controller:
         # Iterate over all keys that should be updated (use copy of the set to avoid runtime concurrency errors)
         for key in self._data_manager_keys:
 
-            # Update the corresponding value
-            dm.set_data(**{key: self.__getattribute__(self._data_manager_map[key])})
+            # Fetch the current attribute's value
+            value = self.__getattribute__(self._data_manager_map[key])
+
+            # Check if the last saved value and the current reading mismatch
+            if key not in self._data_manager_last_saved or self._data_manager_last_saved[key] != value:
+
+                # Update the corresponding values
+                dm.set_data(**{key: value})
+                self._data_manager_last_saved[key] = value
 
     def _update_data(self):
         """
@@ -531,7 +541,7 @@ class Controller:
         self._arm_servo = 1500
         self._arm_servo_speed = 20
 
-        # Create custom functions to update the thrusters
+        # Create custom functions to update the motors
         def _update_arm(self):
             if self.hat_x == 1 and self._arm_servo + self._arm_servo_speed <= self._axis_max:
                 self._arm_servo += self._arm_servo_speed
@@ -543,7 +553,12 @@ class Controller:
             return self._idle + self.hat_y * self._button_sensitivity
 
         def _update_box(self):
-            return self._idle
+            if self.button_left_stick:
+                return self._idle - self._button_sensitivity
+            elif self.button_right_stick:
+                return self._idle + self._button_sensitivity
+            else:
+                return self._idle
 
         # Register the thrusters as the properties
         self.__class__.motor_arm = property(_update_arm)
