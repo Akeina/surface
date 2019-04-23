@@ -25,6 +25,8 @@ You should use the 'clear' function to clear the cache (for example at start of 
 As mentioned before, you should modify the '_transmission_keys' set to include all the values that should be networked
 with the Pi.
 
+You should modify the 'CACHE_PATH' constant to change where the cache should be stored (affects the performance).
+
 ** Example **
 
 Let axis_x = 10, axis_y = 20, axis_z = -15. To save these values into the data manager, call:
@@ -45,9 +47,12 @@ Kacper Florianski
 
 """
 
-# TODO: Possibly replace with Cache (test with full software)
 from diskcache import FanoutCache
 from math import sqrt
+from os import path
+
+# Build the cache PATH
+CACHE_PATH = path.join("C:", "Coding", "Python", "ROV", "cache")
 
 
 class DataManager:
@@ -64,7 +69,7 @@ class DataManager:
         """
 
         # Initialise the data cache
-        self._data = FanoutCache("cache", shards=8)
+        self._data = FanoutCache(CACHE_PATH, shards=8)
 
         # Create a set of keys matching data which should be sent over the network
         self._transmission_keys = {
