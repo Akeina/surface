@@ -133,8 +133,7 @@ class Controller:
 
             3. Modify the '_SENSITIVITY' constant to specify how sensitive should the values setting be.
 
-            4. Modify the value in 'button_speed' or 'servo_speed' to specify how quickly should the buttons
-            change the values.
+            4. Modify the value in '_button_sensitivity' to specify the quickly should the buttons change the values.
 
             5. Modify the '_data_manager_map' dictionary to synchronise the controller with the data manager.
 
@@ -187,21 +186,10 @@ class Controller:
         self._hat_x = 0
 
         # Initialise the idle value (default PWM output)
-        self.idle = normalise(0, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
+        self._idle = normalise(0, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
 
         # Initialise the button sensitivity (higher value for bigger PWM values' changes)
-        self.button_speed = min(400, self._axis_max - self.idle)
-        self.servo_speed = 20
-
-        # Initialise servo and servo-like LED starting positions
-        self._arm_servo = 1500  # 1500 - middle position
-        self._lamp_brightness = 1100  # 1100 - off; 1900 - full brightness
-
-        # Generate a region of self._lamp_brightness below self._axis_min and above self._axis_max.
-        # This is to make easier to turn off the lamp and keep it at full brightness.
-        self._lamp_extended_range = 200
-        self._lamp_min = self._axis_min - self._lamp_extended_range
-        self._lamp_max = self._axis_max + self._lamp_extended_range
+        self._button_sensitivity = min(400, self._axis_max - self._idle)
 
         # Initialise the buttons information
         self.button_A = False
@@ -257,11 +245,14 @@ class Controller:
         # Create a separate set of the data manager keys, for performance reasons
         self._data_manager_keys = set(self._data_manager_map.keys()).copy()
 
+        # Create a separate dict to remember the last state of the values and avoid updating the cache unnecessarily
+        self._data_manager_last_saved = dict()
+
         # Update the initial values
         self._tick_update_data()
 
-        # Initialise the inputs delay (to slow down with writing the data)
-        self._UPDATE_DELAY = 0.05
+        # Initialise the cache delay (to slow down with writing the data)
+        self._UPDATE_DELAY = 0.025
 
     @property
     def left_axis_x(self):
@@ -358,8 +349,15 @@ class Controller:
         # Iterate over all keys that should be updated (use copy of the set to avoid runtime concurrency errors)
         for key in self._data_manager_keys:
 
-            # Update the corresponding value
-            dm.set_data(**{key: self.__getattribute__(self._data_manager_map[key])})
+            # Fetch the current attribute's value
+            value = self.__getattribute__(self._data_manager_map[key])
+
+            # Check if the last saved value and the current reading mismatch
+            if key not in self._data_manager_last_saved or self._data_manager_last_saved[key] != value:
+
+                # Update the corresponding values
+                dm.set_data(**{key: value})
+                self._data_manager_last_saved[key] = value
 
     def _update_data(self):
         """
@@ -406,109 +404,109 @@ class Controller:
 
         # Create custom functions to update the thrusters
         def _update_thruster_fp(self):
-            if self.right_trigger != self.idle:
+            if self.right_trigger != self._idle:
                 return self.right_trigger
-            elif self.left_trigger != self.idle:
+            elif self.left_trigger != self._idle:
                 return self.left_trigger
-            elif self.right_axis_x != self.idle:
+            elif self.right_axis_x != self._idle:
                 return self.right_axis_x
             elif self.button_X:
-                return self.idle - self.button_speed
+                return self._idle - self._button_sensitivity
             elif self.button_Y:
-                return self.idle + self.button_speed
+                return self._idle + self._button_sensitivity
             else:
-                return self.idle
+                return self._idle
 
         def _update_thruster_fs(self):
-            if self.right_trigger != self.idle:
+            if self.right_trigger != self._idle:
                 return self.right_trigger
-            elif self.left_trigger != self.idle:
+            elif self.left_trigger != self._idle:
                 return self.left_trigger
-            elif self.right_axis_x != self.idle:
-                return 2 * self.idle - self.right_axis_x
+            elif self.right_axis_x != self._idle:
+                return 2 * self._idle - self.right_axis_x
             elif self.button_X:
-                return self.idle + self.button_speed
+                return self._idle + self._button_sensitivity
             elif self.button_Y:
-                return self.idle - self.button_speed
+                return self._idle - self._button_sensitivity
             else:
-                return self.idle
+                return self._idle
 
         def _update_thruster_ap(self):
 
-            if self.right_axis_x != self.idle:
+            if self.right_axis_x != self._idle:
                 return self.right_axis_x
-            elif self.right_trigger != self.idle:
+            elif self.right_trigger != self._idle:
                 return self.right_trigger
-            elif self.left_trigger != self.idle:
+            elif self.left_trigger != self._idle:
                 return self.left_trigger
             elif self.button_X:
-                return self.idle + self.button_speed
+                return self._idle + self._button_sensitivity
             elif self.button_Y:
-                return self.idle - self.button_speed
+                return self._idle - self._button_sensitivity
             else:
-                return self.idle
+                return self._idle
 
         def _update_thruster_as(self):
-            if self.right_axis_x != self.idle:
-                return 2 * self.idle - self.right_axis_x
-            elif self.right_trigger != self.idle:
+            if self.right_axis_x != self._idle:
+                return 2 * self._idle - self.right_axis_x
+            elif self.right_trigger != self._idle:
                 return self.right_trigger
-            elif self.left_trigger != self.idle:
+            elif self.left_trigger != self._idle:
                 return self.left_trigger
             elif self.button_X:
-                return self.idle - self.button_speed
+                return self._idle - self._button_sensitivity
             elif self.button_Y:
-                return self.idle + self.button_speed
+                return self._idle + self._button_sensitivity
             else:
-                return self.idle
+                return self._idle
 
         def _update_thruster_tfp(self):
             if self.button_RB:
-                return self.idle + self.button_speed
+                return self._idle + self._button_sensitivity
             elif self.button_LB:
-                return self.idle - self.button_speed
-            elif self.left_axis_y != self.idle:
+                return self._idle - self._button_sensitivity
+            elif self.left_axis_y != self._idle:
                 return self.left_axis_y
-            elif self.left_axis_x != self.idle:
+            elif self.left_axis_x != self._idle:
                 return self.left_axis_x
             else:
-                return self.idle
+                return self._idle
 
         def _update_thruster_tfs(self):
             if self.button_RB:
-                return self.idle + self.button_speed
+                return self._idle + self._button_sensitivity
             elif self.button_LB:
-                return self.idle - self.button_speed
-            elif self.left_axis_y != self.idle:
+                return self._idle - self._button_sensitivity
+            elif self.left_axis_y != self._idle:
                 return self.left_axis_y
-            elif self.left_axis_x != self.idle:
-                return 2 * self.idle - self.left_axis_x
+            elif self.left_axis_x != self._idle:
+                return 2 * self._idle - self.left_axis_x
             else:
-                return self.idle
+                return self._idle
 
         def _update_thruster_tap(self):
             if self.button_RB:
-                return self.idle + self.button_speed
+                return self._idle + self._button_sensitivity
             elif self.button_LB:
-                return self.idle - self.button_speed
-            elif self.left_axis_y != self.idle:
-                return 2 * self.idle - self.left_axis_y
-            elif self.left_axis_x != self.idle:
+                return self._idle - self._button_sensitivity
+            elif self.left_axis_y != self._idle:
+                return 2 * self._idle - self.left_axis_y
+            elif self.left_axis_x != self._idle:
                 return self.left_axis_x
             else:
-                return self.idle
+                return self._idle
 
         def _update_thruster_tas(self):
             if self.button_RB:
-                return self.idle + self.button_speed
+                return self._idle + self._button_sensitivity
             elif self.button_LB:
-                return self.idle - self.button_speed
-            elif self.left_axis_y != self.idle:
-                return 2 * self.idle - self.left_axis_y
-            elif self.left_axis_x != self.idle:
-                return 2 * self.idle - self.left_axis_x
+                return self._idle - self._button_sensitivity
+            elif self.left_axis_y != self._idle:
+                return 2 * self._idle - self.left_axis_y
+            elif self.left_axis_x != self._idle:
+                return 2 * self._idle - self.left_axis_x
             else:
-                return self.idle
+                return self._idle
 
         # Register the thrusters as the properties
         self.__class__.thruster_fp = property(_update_thruster_fp)
@@ -540,33 +538,29 @@ class Controller:
         """
 
         # Create custom functions to update the motors
-        def _update_arm(self):      # Servo
-            if self.hat_x == 1 and self._arm_servo < self._axis_max:
-                self._arm_servo += self.servo_speed
-            elif self.hat_x == -1 and self._arm_servo > self._axis_min:
-                self._arm_servo -= self.servo_speed
-            return self._arm_servo
+        def _update_arm(self):
+            return self._idle + self.hat_x * self._button_sensitivity
 
         def _update_gripper(self):
-            return self.idle + self.hat_y * self.button_speed       # Hat can return values: -1, 0, 1
+            return self._idle + self.hat_y * self._button_sensitivity
 
-        def _update_trout(self):
+        def _update_box(self):
             if self.button_left_stick:
-                return self.idle - self.button_speed
+                return self._idle - self._button_sensitivity
             elif self.button_right_stick:
-                return self.idle + self.button_speed
+                return self._idle + self._button_sensitivity
             else:
-                return self.idle
+                return self._idle
 
-        # Register the motors as the properties
+        # Register the thrusters as the properties
         self.__class__.motor_arm = property(_update_arm)
         self.__class__.motor_gripper = property(_update_gripper)
-        self.__class__.motor_trout = property(_update_trout)
+        self.__class__.motor_box = property(_update_box)
 
         # Update the data manager with the new properties
         self._data_manager_map["Mot_R"] = "motor_arm"
         self._data_manager_map["Mot_G"] = "motor_gripper"
-        self._data_manager_map["Mot_F"] = "motor_trout"
+        self._data_manager_map["Mot_F"] = "motor_box"
 
     def _register_light(self):
         """
@@ -577,16 +571,16 @@ class Controller:
 
         """
 
+        # Initialise the LED brightness tracking and its illumination change speed
+        self._lamp_brightness = 1100
+        self._lamp_speed = 50
+
         # Create custom functions to update the thrusters
         def _update_brightness(self):
-            if self.button_B:
-                if self._lamp_brightness >= self._lamp_max:  # Resets the LED PWM output after reaching maximum
-                    self._lamp_brightness = self._lamp_min
-                self._lamp_brightness += self.servo_speed
-            if self._lamp_brightness < self._axis_min:
-                return self._axis_max
-            elif self._lamp_brightness > self._axis_max:
-                return self._axis_max
+            if self.button_B and self._lamp_brightness + self._lamp_speed <= self._axis_max:
+                self._lamp_brightness += self._lamp_speed
+            elif self.button_A and self._lamp_brightness - self._lamp_speed >= self._axis_min:
+                self._lamp_brightness -= self._lamp_speed
             return self._lamp_brightness
 
         # Register the thrusters as the properties
