@@ -142,7 +142,8 @@ class DataManager:
 
         # Initialise the keys to safeguard
         self._SAFEGUARD_KEYS = {
-            "Thr_FP", "Thr_FS", "Thr_AP", "Thr_AS", "Thr_TFP", "Thr_TFS", "Thr_TAP", "Thr_TAS", "Mot_F", "Mot_G",
+            "Thr_FP", "Thr_FS", "Thr_AP", "Thr_AS", "Thr_TFP", "Thr_TFS", "Thr_TAP", "Thr_TAS",
+            "Mot_F", "Mot_G", "Mot_R"
         }
 
         # Initialise the current limit
