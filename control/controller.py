@@ -191,12 +191,6 @@ class Controller:
         # Initialise the button sensitivity (higher value for bigger PWM values' changes)
         self._button_sensitivity = min(400, self._axis_max - self._idle)
 
-        # Initialise the arm rotation sensitivity
-        self._arm_rotation_speed = min(50, self._axis_max - self._idle)
-
-        # Initialise the box opening sensitivity
-        self._box_movement_speed = min(50, self._axis_max - self._idle)
-
         # Initialise the buttons information
         self.button_A = False
         self.button_B = False
@@ -545,16 +539,20 @@ class Controller:
 
         # Create custom functions to update the motors
         def _update_arm(self):
-            return self._idle + self.hat_x * self._arm_rotation_speed
+            # Initialise the arm rotation sensitivity
+            _arm_rotation_speed = min(50, self._axis_max - self._idle)
+            return self._idle + self.hat_x * _arm_rotation_speed
 
         def _update_gripper(self):
             return self._idle + self.hat_y * self._button_sensitivity
 
         def _update_box(self):
+            # Initialise the box opening sensitivity
+            _box_movement_speed = min(50, self._axis_max - self._idle)
             if self.button_left_stick:
-                return self._idle - self._box_movement_speed
+                return self._idle - _box_movement_speed
             elif self.button_right_stick:
-                return self._idle + self._box_movement_speed
+                return self._idle + _box_movement_speed
             else:
                 return self._idle
 
