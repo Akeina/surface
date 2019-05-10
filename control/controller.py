@@ -612,6 +612,7 @@ class Controller:
         else:
             self._data_thread.start()
             self._controller_thread.start()
+            print("Controller initialised.")
 
     def __str__(self):
         return "\n".join([
