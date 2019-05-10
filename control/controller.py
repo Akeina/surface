@@ -537,26 +537,22 @@ class Controller:
 
         """
 
-        # Initialise the servo motor position tracking and its rotation speed
-        self._arm_servo = 1500
-        self._arm_servo_speed = 20
-
         # Create custom functions to update the motors
         def _update_arm(self):
-            if self.hat_x == 1 and self._arm_servo + self._arm_servo_speed <= self._axis_max:
-                self._arm_servo += self._arm_servo_speed
-            elif self.hat_x == -1 and self._arm_servo - self._arm_servo_speed >= self._axis_min:
-                self._arm_servo -= self._arm_servo_speed
-            return self._arm_servo
+            # Initialise the arm rotation sensitivity
+            arm_rotation_speed = min(50, self._axis_max - self._idle)
+            return self._idle + self.hat_x * arm_rotation_speed
 
         def _update_gripper(self):
             return self._idle + self.hat_y * self._button_sensitivity
 
         def _update_box(self):
+            # Initialise the box opening sensitivity
+            box_movement_speed = min(50, self._axis_max - self._idle)
             if self.button_left_stick:
-                return self._idle - self._button_sensitivity
+                return self._idle - box_movement_speed
             elif self.button_right_stick:
-                return self._idle + self._button_sensitivity
+                return self._idle + box_movement_speed
             else:
                 return self._idle
 
