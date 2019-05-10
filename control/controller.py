@@ -540,19 +540,19 @@ class Controller:
         # Create custom functions to update the motors
         def _update_arm(self):
             # Initialise the arm rotation sensitivity
-            _arm_rotation_speed = min(50, self._axis_max - self._idle)
-            return self._idle + self.hat_x * _arm_rotation_speed
+            arm_rotation_speed = min(50, self._axis_max - self._idle)
+            return self._idle + self.hat_x * arm_rotation_speed
 
         def _update_gripper(self):
             return self._idle + self.hat_y * self._button_sensitivity
 
         def _update_box(self):
             # Initialise the box opening sensitivity
-            _box_movement_speed = min(50, self._axis_max - self._idle)
+            box_movement_speed = min(50, self._axis_max - self._idle)
             if self.button_left_stick:
-                return self._idle - _box_movement_speed
+                return self._idle - box_movement_speed
             elif self.button_right_stick:
-                return self._idle + _box_movement_speed
+                return self._idle + box_movement_speed
             else:
                 return self._idle
 
