@@ -240,7 +240,7 @@ class Controller:
         # Register thrusters, motors and the light
         self._register_thrusters()
         self._register_motors()
-        self._register_light()
+        # self._register_light() TODO: Adjust later
 
         # Create a separate set of the data manager keys, for performance reasons
         self._data_manager_keys = set(self._data_manager_map.keys()).copy()
@@ -404,107 +404,222 @@ class Controller:
 
         # Create custom functions to update the thrusters
         def _update_thruster_fp(self):
-            if self.right_trigger != self._idle:
+
+            # If surge and yaw
+            if self.left_axis_y != self._idle and self.right_axis_x != self._idle:
+
+                # If backwards
+                if self.left_axis_y < self._idle:
+                    return 2 * self._idle - self.left_axis_y
+
+                # Else forwards
+                else:
+                    return 2 * self._idle - self.right_axis_x
+
+            # If surge only
+            elif self.left_axis_y != self._idle:
+                return 2 * self._idle - self.left_axis_y
+
+            # If sway only
+            elif self.right_axis_x != self._idle:
+                return 2 * self._idle - self.right_axis_x
+
+            # If yaw starboard
+            elif self.right_trigger != self._idle:
                 return self.right_trigger
+
+            # If yaw pot
             elif self.left_trigger != self._idle:
                 return self.left_trigger
-            elif self.right_axis_x != self._idle:
-                return self.right_axis_x
-            elif self.button_X:
-                return self._idle - self._button_sensitivity
-            elif self.button_Y:
-                return self._idle + self._button_sensitivity
+
+            # Else idle
             else:
                 return self._idle
 
         def _update_thruster_fs(self):
-            if self.right_trigger != self._idle:
-                return self.right_trigger
-            elif self.left_trigger != self._idle:
-                return self.left_trigger
+
+            # If surge and yaw
+            if self.left_axis_y != self._idle and self.right_axis_x != self._idle:
+
+                # If backwards
+                if self.left_axis_y < self._idle:
+                    return 2 * self._idle - self.left_axis_y
+
+                # Else forwards
+                else:
+                    return self.right_axis_x
+
+            # If surge only
+            elif self.left_axis_y != self._idle:
+                return 2 * self._idle - self.left_axis_y
+
+            # If sway only
             elif self.right_axis_x != self._idle:
-                return 2 * self._idle - self.right_axis_x
-            elif self.button_X:
-                return self._idle + self._button_sensitivity
-            elif self.button_Y:
-                return self._idle - self._button_sensitivity
+                return self.right_axis_x
+
+            # If yaw starboard
+            elif self.right_trigger != self._idle:
+                return 2 * self._idle - self.right_trigger
+
+            # If yaw pot
+            elif self.left_trigger != self._idle:
+                return 2 * self._idle - self.left_trigger
+
+            # Else idle
             else:
                 return self._idle
 
         def _update_thruster_ap(self):
 
-            if self.right_axis_x != self._idle:
-                return self.right_axis_x
+            # If surge and yaw
+            if self.left_axis_y != self._idle and self.right_axis_x != self._idle:
+
+                # If forwards
+                if self.left_axis_y > self._idle:
+                    return self.left_axis_y
+
+                # Else backwards
+                else:
+                    return 2 * self._idle - self.right_axis_x
+
+            # If surge only
+            elif self.left_axis_y != self._idle:
+                return self.left_axis_y
+
+            # If sway only
+            elif self.right_axis_x != self._idle:
+                return 2 * self._idle - self.right_axis_x
+
+            # If yaw starboard
             elif self.right_trigger != self._idle:
-                return self.right_trigger
+                return 2 * self._idle - self.right_trigger
+
+            # If yaw pot
             elif self.left_trigger != self._idle:
-                return self.left_trigger
-            elif self.button_X:
-                return self._idle + self._button_sensitivity
-            elif self.button_Y:
-                return self._idle - self._button_sensitivity
+                return 2 * self._idle - self.left_trigger
+
+            # Else idle
             else:
                 return self._idle
 
         def _update_thruster_as(self):
-            if self.right_axis_x != self._idle:
-                return 2 * self._idle - self.right_axis_x
+
+            # If surge and yaw
+            if self.left_axis_y != self._idle and self.right_axis_x != self._idle:
+
+                # If forwards
+                if self.left_axis_y > self._idle:
+                    return self.left_axis_y
+
+                # Else backwards
+                else:
+                    return self.right_axis_x
+
+            # If surge only
+            elif self.left_axis_y != self._idle:
+                return self.left_axis_y
+
+            # If sway only
+            elif self.right_axis_x != self._idle:
+                return self.right_axis_x
+
+            # If yaw starboard
             elif self.right_trigger != self._idle:
                 return self.right_trigger
+
+            # If yaw pot
             elif self.left_trigger != self._idle:
                 return self.left_trigger
-            elif self.button_X:
-                return self._idle - self._button_sensitivity
-            elif self.button_Y:
-                return self._idle + self._button_sensitivity
+
+            # Else idle
             else:
                 return self._idle
 
         def _update_thruster_tfp(self):
+
+            # If full upwards
             if self.button_RB:
                 return self._idle + self._button_sensitivity
+
+            # If full downwards
             elif self.button_LB:
                 return self._idle - self._button_sensitivity
-            elif self.left_axis_y != self._idle:
-                return self.left_axis_y
-            elif self.left_axis_x != self._idle:
-                return self.left_axis_x
+
+            # If pitch
+            elif self.hat_y:
+                return self._idle - self.hat_y * self._button_sensitivity
+
+            # If roll
+            elif self.hat_x:
+                return self._idle + self.hat_x * self._button_sensitivity
+
+            # Else idle
             else:
                 return self._idle
 
         def _update_thruster_tfs(self):
+
+            # If full upwards
             if self.button_RB:
                 return self._idle + self._button_sensitivity
+
+            # If full downwards
             elif self.button_LB:
                 return self._idle - self._button_sensitivity
-            elif self.left_axis_y != self._idle:
-                return self.left_axis_y
-            elif self.left_axis_x != self._idle:
-                return 2 * self._idle - self.left_axis_x
+
+            # If pitch
+            elif self.hat_y:
+                return self._idle - self.hat_y * self._button_sensitivity
+
+            # If roll
+            elif self.hat_x:
+                return self._idle - self.hat_x * self._button_sensitivity
+
+            # Else idle
             else:
                 return self._idle
 
         def _update_thruster_tap(self):
+
+            # If full upwards
             if self.button_RB:
                 return self._idle + self._button_sensitivity
+
+            # If full downwards
             elif self.button_LB:
                 return self._idle - self._button_sensitivity
-            elif self.left_axis_y != self._idle:
-                return 2 * self._idle - self.left_axis_y
-            elif self.left_axis_x != self._idle:
-                return self.left_axis_x
+
+            # If pitch
+            elif self.hat_y:
+                return self._idle + self.hat_y * self._button_sensitivity
+
+            # If roll
+            elif self.hat_x:
+                return self._idle + self.hat_x * self._button_sensitivity
+
+            # Else idle
             else:
                 return self._idle
 
         def _update_thruster_tas(self):
+
+            # If full upwards
             if self.button_RB:
                 return self._idle + self._button_sensitivity
+
+            # If full downwards
             elif self.button_LB:
                 return self._idle - self._button_sensitivity
-            elif self.left_axis_y != self._idle:
-                return 2 * self._idle - self.left_axis_y
-            elif self.left_axis_x != self._idle:
-                return 2 * self._idle - self.left_axis_x
+
+            # If pitch
+            elif self.hat_y:
+                return self._idle + self.hat_y * self._button_sensitivity
+
+            # If roll
+            elif self.hat_x:
+                return self._idle - self.hat_x * self._button_sensitivity
+
+            # Else idle
             else:
                 return self._idle
 
@@ -545,16 +660,44 @@ class Controller:
 
         # Create custom functions to update the motors
         def _update_arm(self):
-            return self._idle + self.hat_x * arm_rotation_speed
+
+            # If starboard
+            if self.button_B:
+                return self._idle + arm_rotation_speed
+
+            # If pot
+            elif self.button_X:
+                return self._idle - arm_rotation_speed
+
+            # Else idle
+            else:
+                return self._idle
 
         def _update_gripper(self):
-            return self._idle + self.hat_y * self._button_sensitivity
+
+            # If upwards
+            if self.button_Y:
+                return self._idle + arm_rotation_speed
+
+            # If downwards
+            elif self.button_A:
+                return self._idle - arm_rotation_speed
+
+            # Else idle
+            else:
+                return self._idle
 
         def _update_box(self):
+
+            # If left box
             if self.button_left_stick:
                 return self._idle - box_movement_speed
+
+            # If right box
             elif self.button_right_stick:
                 return self._idle + box_movement_speed
+
+            # Else idle
             else:
                 return self._idle
 
@@ -568,6 +711,7 @@ class Controller:
         self._data_manager_map["Mot_G"] = "motor_gripper"
         self._data_manager_map["Mot_F"] = "motor_box"
 
+    # TODO: Adjust later
     def _register_light(self):
         """
 
