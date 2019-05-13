@@ -426,11 +426,11 @@ class Controller:
 
             # If yaw starboard
             elif self.right_trigger != self._idle:
-                return self.right_trigger
+                return 2 * self._idle - self.right_trigger
 
             # If yaw pot
             elif self.left_trigger != self._idle:
-                return self.left_trigger
+                return 2 * self._idle - self.left_trigger
 
             # Else idle
             else:
@@ -459,11 +459,11 @@ class Controller:
 
             # If yaw starboard
             elif self.right_trigger != self._idle:
-                return 2 * self._idle - self.right_trigger
+                return self.right_trigger
 
             # If yaw pot
             elif self.left_trigger != self._idle:
-                return 2 * self._idle - self.left_trigger
+                return self.left_trigger
 
             # Else idle
             else:
@@ -492,11 +492,11 @@ class Controller:
 
             # If yaw starboard
             elif self.right_trigger != self._idle:
-                return 2 * self._idle - self.right_trigger
+                return self.right_trigger
 
             # If yaw pot
             elif self.left_trigger != self._idle:
-                return 2 * self._idle - self.left_trigger
+                return self.left_trigger
 
             # Else idle
             else:
@@ -525,11 +525,11 @@ class Controller:
 
             # If yaw starboard
             elif self.right_trigger != self._idle:
-                return self.right_trigger
+                return 2 * self._idle - self.right_trigger
 
             # If yaw pot
             elif self.left_trigger != self._idle:
-                return self.left_trigger
+                return 2 * self._idle - self.left_trigger
 
             # Else idle
             else:
@@ -653,21 +653,21 @@ class Controller:
         """
 
         # Initialise the arm rotation sensitivity
-        arm_rotation_speed = min(50, self._axis_max - self._idle)
+        arm_rotation_speed = min(100, self._axis_max - self._idle)
 
         # Initialise the box opening sensitivity
-        box_movement_speed = min(50, self._axis_max - self._idle)
+        box_movement_speed = min(100, self._axis_max - self._idle)
 
         # Create custom functions to update the motors
         def _update_arm(self):
 
             # If starboard
             if self.button_B:
-                return self._idle + arm_rotation_speed
+                return self._idle - arm_rotation_speed
 
             # If pot
             elif self.button_X:
-                return self._idle - arm_rotation_speed
+                return self._idle + arm_rotation_speed
 
             # Else idle
             else:
@@ -677,11 +677,11 @@ class Controller:
 
             # If upwards
             if self.button_Y:
-                return self._idle + arm_rotation_speed
+                return self._idle + self._button_sensitivity
 
             # If downwards
             elif self.button_A:
-                return self._idle - arm_rotation_speed
+                return self._idle - self._button_sensitivity
 
             # Else idle
             else:
