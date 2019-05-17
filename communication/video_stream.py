@@ -39,13 +39,18 @@ Kacper Florianski
 
 """
 
-from communication.connection import Connection
+import socket
 from time import sleep
 from dill import loads
 from threading import Thread
+from _pickle import UnpicklingError
 
 
-class VideoStream(Connection):
+class VideoStream:
+
+    # Custom exception to handle data errors
+    class DataError(Exception):
+        pass
 
     def __init__(self, ip="localhost", port=50001):
         """
@@ -57,11 +62,18 @@ class VideoStream(Connection):
 
         """
 
-        # Super the TCP data exchange functionality
-        super().__init__(ip=ip, port=port)
+        # Save the host and port information
+        self._ip = ip
+        self._port = port
+
+        # Initialise the socket field
+        self._socket = None
+
+        # Initialise the delay constant to offload some computing power when reconnecting
+        self._RECONNECT_DELAY = 1
 
         # Override the process as a thread to handle the frame correctly
-        self._connection_process = Thread(target=self._connect)
+        self._thread = Thread(target=self._connect)
 
         # Initialise the frame-end string to recognise when a full frame was received
         self._end_payload = bytes("Frame was successfully sent", encoding="ASCII")
@@ -71,9 +83,6 @@ class VideoStream(Connection):
 
         # Initialise the frame video stream data
         self._frame_partial = b''
-
-        # Override the communication delay
-        self._COMMUNICATION_DELAY = 0
 
     @property
     def frame(self):
@@ -108,6 +117,62 @@ class VideoStream(Connection):
                 # Send the acknowledgement
                 self._socket.sendall(bytes("ACK", encoding="ASCII"))
 
-        except (ConnectionResetError, ConnectionAbortedError):
+        except (ConnectionResetError, ConnectionAbortedError, UnpicklingError):
             sleep(self._RECONNECT_DELAY)
             raise self.DataError
+
+    def _connect(self):
+        """
+
+        Function used to run a continuous connection with Raspberry Pi.
+
+        Runs an infinite loop that performs re-connection to the given address as well as exchanges data with it, via
+        blocking send and receive functions. The data exchanged is JSON-encoded.
+
+        ** Modifications **
+
+            1. Modify the bottom try, except block to change non-data-specific error-handling.
+
+        """
+
+        # Never stop the connection once it was started
+        while True:
+
+            try:
+                # Check if the socket is None to avoid running into errors when reconnecting
+                if self._socket is None:
+
+                    # Inform that client is attempting to connect to the server
+                    print("Connecting to video stream at {}:{}...".format(self._ip, self._port))
+
+                    # Set the socket for IPv4 addresses (hence AF_INET) and TCP (hence SOCK_STREAM)
+                    self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+                # Connect to the server
+                self._socket.connect((self._ip, self._port))
+                print("Connected to video stream at {}:{}, starting data exchange".format(self._ip, self._port))
+
+                # Keep exchanging data
+                while True:
+
+                    # Attempt to handle the data, break in case of errors
+                    try:
+                        self._handle_data()
+                    except self.DataError:
+                        break
+
+                # Cleanup
+                self._socket.close()
+                self._socket = None
+
+                # Inform that the connection is closed
+                print("Video stream at {}:{} closed successfully".format(self._ip, self._port))
+
+            except (ConnectionRefusedError, OSError):
+                sleep(self._RECONNECT_DELAY)
+                continue
+
+    def stream(self):
+
+        # Start receiving the video stream
+        self._thread.start()
