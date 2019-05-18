@@ -24,7 +24,6 @@ sudo python3.6 -m pip install diskcache
 sudo python3.6 -m pip install pyserial
 sudo python3.6 -m pip install pathos
 sudo python3.6 -m pip install inputs
-sudo python3.6 -m pip install numba
 sudo python3.6 -m pip install PySide2
 ```
 

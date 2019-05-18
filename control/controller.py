@@ -1,4 +1,9 @@
 """
+Controller
+**********
+
+Description
+===========
 
 Controller is used to read and process game pad input.
 
@@ -97,10 +102,8 @@ import communication.data_manager as dm
 from threading import Thread
 from inputs import devices
 from time import time
-from numba import jit
 
 
-@jit
 def normalise(value, current_min, current_max, intended_min, intended_max):
     """
 
