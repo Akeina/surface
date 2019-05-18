@@ -5,97 +5,128 @@ Controller
 Description
 ===========
 
-Controller is used to read and process game pad input.
+Controller is used to read and process the game pad input.
 
-** Functionality **
+Functionality
+=============
 
-By importing the module you gain access to the class 'Controller', and some additional functions.
+Controller
+----------
 
-You should create an instance of it and use the 'init' function to start reading the input. The class will automatically
-read all controller events and dispatch them to corresponding fields as well as update the data manager if needed.
+The :class:`Controller` class provides complex input reading and processing, connected with the :class:`DataManager`.
 
-You should modify the `__init__` function to change any functionality of the class.
+Execution
+---------
 
-** Constants and other values **
+To start the controller, you should create an instance of :class:`Controller` and call :func:`init`, for example::
 
-The class lets you access the controller's state through multiple fields. A complete list is as follows:
+    controller = Controller()
+    controller.init()
 
-* Axis (ints) *
+.. note::
 
-    left_axis_x
-    left_axis_y
-    right_axis_x
-    right_axis_y
+    You will be notified if the controller isn't detected.
 
-* Triggers (ints) *
+Functions & classes
+-------------------
 
-    left_trigger
-    right_trigger
+.. note::
+
+    Remember that the code is further described by in-line comments and docstrings.
+
+The following list shortly summarises the functionality of each code component within the :class:`Server` class:
+
+    1. :func:`__init__` builds the controller, returns at the beginning if no controller is detected
+    2. :func:`_dispatch_event` dispatches controller readings into class fields
+    3. :func:`_tick_update_data` updates the :class:`DataManager` with the current values
+    4. :func:`_update_data` runs an infinite loop to keep updating the :class:`DataManager`
+    5. :func:`_read` runs an infinite loop to keep reading the controller input
+    6. :func:`_register_thrusters` initialises thruster-related controls
+    7. :func:`_register_motors` initialises motor-related controls
+    8. :func:`_register_light` initialises light-related controls
+    9. :func:`init` starts all threads
+
+Additionally, the :func:`normalise` provides the scaling of values to meet the expected range.
+
+Fields
+------
+
+The :class:`Controller` provides a number of fields that are accessible via the corresponding getters.
+
+Axis (ints)
++++++++++++
+
+    - left_axis_x
+    - left_axis_y
+    - right_axis_x
+    - right_axis_y
+
+Triggers (ints)
++++++++++++++++
+
+    - left_trigger
+    - right_trigger
 
 * Hat (ints) *
 
-    hat_y
-    hat_x
+    - hat_y
+    - hat_x
 
-* Buttons (booleans) *
+Buttons (booleans)
+++++++++++++++++++
 
-    button_A
-    button_B
-    button_X
-    button_Y
-    button_LB
-    button_RB
-    button_left_stick
-    button_right_stick
-    button_select
-    button_start
-
-In addition, you can change the constant values of axis' and triggers' min/max, to adjust the expected output values. To
-update the data manager, adjust the '_data_manager_map' dictionary, where each key is the value to be set, and each
-value corresponds to the property.
+    - button_A
+    - button_B
+    - button_X
+    - button_Y
+    - button_LB
+    - button_RB
+    - button_left_stick
+    - button_right_stick
+    - button_select
+    - button_start
 
 On top of acquiring the information about the controller, PWM outputs are provided. Precisely:
 
-* Thrusters *
+Thrusters (ints)
+++++++++++++++++
 
-    thruster_fp
-    thruster_fs
-    thruster_ap
-    thruster_as
-    thruster_tfp
-    thruster_tfs
-    thruster_tap
-    thruster_tas
+    - thruster_fp
+    - thruster_fs
+    - thruster_ap
+    - thruster_as
+    - thruster_tfp
+    - thruster_tfs
+    - thruster_tap
+    - thruster_tas
 
-* Motors *
+Motors (ints)
++++++++++++++
 
-    motor_arm
-    motor_gripper
+    - motor_arm
+    - motor_gripper
+    - motor_box
 
-* Light *
+Modifications
+=============
 
-    light_brightness
+This module may require an extensive number of modifications to introduce any changes to it. To modify the behaviour of
+the controller itself, you should look into :func:`__init__` and adjust the constants inside. To change the control
+system, you should adjust the code within functions starting with `_register`, or add more.
 
-To change their behaviour, you should modify functions like '_register_thrusters', and all its sub-functions.
+.. warning::
 
-** Example **
+    You must follow the style present in the current registering functions if you were to add a new one.
 
-To create a controller object, call:
-
-    controller = Controller()
-
-To start reading input, call:
-
-    controller.init()
-
-** Author **
+Authorship
+==========
 
 Kacper Florianski
 
-** Extended by **
+Modified by
+-----------
 
 Pawel Czaplewski
-
 """
 
 import communication.data_manager as dm
@@ -106,7 +137,6 @@ from time import time
 
 def normalise(value, current_min, current_max, intended_min, intended_max):
     """
-
     Function used to normalise a value to fit within a given range, knowing its actual range. MinMax normalisation.
 
     :param value: Value to be normalised
@@ -115,7 +145,6 @@ def normalise(value, current_min, current_max, intended_min, intended_max):
     :param intended_min: The expected minimum of the value
     :param intended_max: The expected maximum of the value
     :return: Normalised value
-
     """
 
     return int(intended_min + (value - current_min) * (intended_max - intended_min) / (current_max - current_min))
@@ -125,23 +154,16 @@ class Controller:
 
     def __init__(self):
         """
+        Constructor function used to initialise the controller. Returns early if no controller is detected.
 
-        Function used to initialise the controller.
+        You should modify:
 
-        ** Modifications **
-
-            1. Modify the '_axis_max' and '_axis_min' constants to specify the expected axis values.
-
-            2. Modify the '_trigger_max' and '_trigger_min' constants to specify the expected trigger values.
-
-            3. Modify the '_SENSITIVITY' constant to specify how sensitive should the values setting be.
-
-            4. Modify the value in '_button_sensitivity' to specify the quickly should the buttons change the values.
-
-            5. Modify the '_data_manager_map' dictionary to synchronise the controller with the data manager.
-
-            6. Modify the '_UPDATE_DELAY' constant to specify the read delay from the controller.
-
+            1. `self._axis_max' and '_axis_min' constants to specify the expected axis values.
+            2. `self._trigger_max' and '_trigger_min' constants to specify the expected trigger values.
+            3. `self._SENSITIVITY' constant to specify how sensitive should the values setting be.
+            4. Hardcoded value in '_button_sensitivity' to specify the quickly should the buttons change the values.
+            5. `self._data_manager_map' dictionary to synchronise the controller with the data manager.
+            6. `self._UPDATE_DELAY' constant to specify the read delay from the controller.
         """
 
         # Fetch the hardware reference via inputs
@@ -243,7 +265,6 @@ class Controller:
         # Register thrusters, motors and the light
         self._register_thrusters()
         self._register_motors()
-        # self._register_light() TODO: Adjust later
 
         # Create a separate set of the data manager keys, for performance reasons
         self._data_manager_keys = set(self._data_manager_map.keys()).copy()
@@ -259,81 +280,159 @@ class Controller:
 
     @property
     def left_axis_x(self):
+        """
+        Getter for the left stick x-axis.
+
+        :return: Normalised controller reading
+        """
+
         return normalise(self._left_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
 
     @left_axis_x.setter
     def left_axis_x(self, value):
+        """
+        Setter for the left stick x-axis. Updates the value if the sensitivity threshold was passed.
+        """
+
         if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._left_axis_x - value) >= self._SENSITIVITY:
             self._left_axis_x = value
 
     @property
     def left_axis_y(self):
+        """
+        Getter for the left stick y-axis.
+
+        :return: Normalised controller reading
+        """
+
         return normalise(self._left_axis_y, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
 
     @left_axis_y.setter
     def left_axis_y(self, value):
+        """
+        Setter for the left stick y-axis. Updates the value if the sensitivity threshold was passed.
+        """
+
         if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._left_axis_y - value) >= self._SENSITIVITY:
             self._left_axis_y = value
 
     @property
     def right_axis_x(self):
+        """
+        Getter for the right stick x-axis.
+
+        :return: Normalised controller reading
+        """
+
         return normalise(self._right_axis_x, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
 
     @right_axis_x.setter
     def right_axis_x(self, value):
+        """
+        Setter for the right stick x-axis. Updates the value if the sensitivity threshold was passed.
+        """
+
         if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._right_axis_x - value) >= self._SENSITIVITY:
             self._right_axis_x = value
 
     @property
     def right_axis_y(self):
+        """
+        Getter for the right stick y-axis.
+
+        :return: Normalised controller reading
+        """
+
         return normalise(self._right_axis_y, self._AXIS_MIN, self._AXIS_MAX, self._axis_min, self._axis_max)
 
     @right_axis_y.setter
     def right_axis_y(self, value):
+        """
+        Setter for the right stick y-axis. Updates the value if the sensitivity threshold was passed.
+        """
+
         if value == self._AXIS_MAX or value == self._AXIS_MIN or abs(self._right_axis_y - value) >= self._SENSITIVITY:
             self._right_axis_y = value
 
     @property
     def left_trigger(self):
+        """
+        Getter for the left trigger.
+
+        :return: Normalised controller reading
+        """
+
         return normalise(self._left_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX,
                          self._trigger_min, 2 * self._trigger_min - self._trigger_max)
 
     @left_trigger.setter
     def left_trigger(self, value):
+        """
+        Setter for the left trigger.
+        """
+
         self._left_trigger = value
 
     @property
     def right_trigger(self):
+        """
+        Getter for the right trigger.
+
+        :return: Normalised controller reading
+        """
+
         return normalise(self._right_trigger, self._TRIGGER_MIN, self._TRIGGER_MAX, self._trigger_min,
                          self._trigger_max)
 
     @right_trigger.setter
     def right_trigger(self, value):
+        """
+        Setter for the right trigger.
+        """
+
         self._right_trigger = value
 
     @property
     def hat_x(self):
+        """
+        Getter for the hat x-axis.
+
+        :return: Normalised controller reading
+        """
+
         return self._hat_x
 
     @hat_x.setter
     def hat_x(self, value):
+        """
+        Setter for the hat x-axis.
+        """
+
         self._hat_x = value
 
     @property
     def hat_y(self):
+        """
+        Getter for the hat y-axis.
+
+        :return: Normalised controller reading
+        """
+
         return self._hat_y
 
     @hat_y.setter
     def hat_y(self, value):
+        """
+        Setter for the hat y-axis.
+        """
+
         self._hat_y = value * (-1)
 
     def _dispatch_event(self, event):
         """
-
         Function used to dispatch each controller event into its corresponding value.
 
-        :param event: Controller event
-
+        :param event: Controller (:mod:`inputs`) event
         """
 
         # Check if a registered event was passed
@@ -344,9 +443,7 @@ class Controller:
 
     def _tick_update_data(self):
         """
-
-        Function used to update the data manager.
-
+        Function used to update the data manager with the current controller values.
         """
 
         # Iterate over all keys that should be updated (use copy of the set to avoid runtime concurrency errors)
@@ -364,9 +461,7 @@ class Controller:
 
     def _update_data(self):
         """
-
-        Function used to periodically update the data manager.
-
+        Function used to keep updating the manager with controller values.
         """
 
         # Initialise the time counter
@@ -382,9 +477,7 @@ class Controller:
 
     def _read(self):
         """
-
         Function used to read an event from the controller and dispatch it accordingly.
-
         """
 
         # Keep reading the input
@@ -398,11 +491,9 @@ class Controller:
 
     def _register_thrusters(self):
         """
-
         Function used to associate thruster values with the controller.
 
-        You should modify each sub-function to change how the values are calculated.
-
+        You should modify each sub-function to change the thrusters' controls.
         """
 
         # Create custom functions to update the thrusters
@@ -648,11 +739,9 @@ class Controller:
 
     def _register_motors(self):
         """
-
         Function used to associate motor values with the controller.
 
-        You should modify each sub-function to change how the values are calculated.
-
+        You should modify each sub-function to change the motors' controls.
         """
 
         # Initialise the arm rotation sensitivity
@@ -714,39 +803,9 @@ class Controller:
         self._data_manager_map["Mot_G"] = "motor_gripper"
         self._data_manager_map["Mot_F"] = "motor_box"
 
-    # TODO: Adjust later
-    def _register_light(self):
-        """
-
-        Function used to associate light values with the controller.
-
-        You should modify each sub-function to change how the values are calculated.
-
-        """
-
-        # Initialise the LED brightness tracking and its illumination change speed
-        self._lamp_brightness = 1100
-        self._lamp_speed = 50
-
-        # Create custom functions to update the thrusters
-        def _update_brightness(self):
-            if self.button_B and self._lamp_brightness + self._lamp_speed <= self._axis_max:
-                self._lamp_brightness += self._lamp_speed
-            elif self.button_A and self._lamp_brightness - self._lamp_speed >= self._axis_min:
-                self._lamp_brightness -= self._lamp_speed
-            return self._lamp_brightness
-
-        # Register the thrusters as the properties
-        self.__class__.light_brightness = property(_update_brightness)
-
-        # Update the data manager with the new properties
-        self._data_manager_map["LED_M"] = "light_brightness"
-
     def init(self):
         """
-
-        Function used to initialise the controller (start reading)
-
+        Function used to start the controller reading threads. Only executes if the controller is correctly detected.
         """
 
         # Check if the controller was correctly created
@@ -758,15 +817,3 @@ class Controller:
             self._data_thread.start()
             self._controller_thread.start()
             print("Controller initialised.")
-
-    def __str__(self):
-        return "\n".join([
-            "Left axis: ({}, {})".format(self.left_axis_x, self.left_axis_y),
-            "Right axis: ({}, {})".format(self.right_axis_x, self.right_axis_y),
-            "Hat: ({}, {})".format(self.hat_x, self.hat_y),
-            "Triggers: LT: {}, RT: {}".format(self.left_trigger, self.right_trigger),
-            "Buttons: A: {}, B: {}, X: {}, Y: {}".format(self.button_A, self.button_B, self.button_X, self.button_Y),
-            "Buttons: Left stick: {}, Right stick: {}, LB: {}, RB: {}"
-                .format(self.button_left_stick, self.button_right_stick, self.button_LB, self.button_RB),
-            "Buttons: Select: {}, Start: {}".format(self.button_select, self.button_start)
-        ])
