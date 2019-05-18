@@ -1,50 +1,73 @@
 """
+Data Manager
+************
+
+Description
+===========
 
 Data Manager is used to maintain different states of data across the system.
 
-** Functionality **
+Functionality
+=============
 
-By importing the module you gain access to three global functions - 'get_data', 'set_data' and 'clear'.
+DataManager
+-----------
 
-You should use the 'get_data' function to gain access to the available resources. You may specify additional arguments,
-which should be dictionary keys, to retrieve a part of the data. If no arguments are specified, the entire dictionary
-is returned. The arguments passed should be strings (because the keys are stored as strings).
+The :class:`DataManager` class features disc caching functionality to provide accessibility and modifiability across
+different modules and processes, as well as additionally safeguards the networked values against too high current.
 
-Set the additional 'transmit' keyword argument when retrieving the data, if the dictionary returned should only contain
-the fields to be sent over the network. Dictionary keys of values to be sent over the network must be included in the
-'_transmission_keys' set within the class, and agreed with the lower-level team beforehand. Set the argument to True to
-retrieve such data. The base functionality otherwise stays the same as with the argument being (by default) False.
+The :func:`get_data`, :func:`set_data` and :func:`clear` globally accessible functions provide ways of interacting with
+the manager.
 
-You should use the 'set_data' function to change the resources. For each keyword argument passed, the state of the data
-dictionary under the given key will be changed to the given value.
+.. warning::
 
-You should use the 'clear' function to clear the cache (for example at start of the program) to save some memory.
+    You should never create an instance of :class:`DataManager` yourself, and instead use the 3 functions mentioned.
 
-** Constants and other values **
+Execution
+---------
 
-As mentioned before, you should modify the '_transmission_keys' set to include all the values that should be networked
-with the Pi.
+You should simply import the module::
 
-You should modify the 'CACHE_PATH' constant to change where the cache should be stored (affects the performance).
+    import communication.data_manager as dm
 
-** Example **
+.. note::
 
-Let axis_x = 10, axis_y = 20, axis_z = -15. To save these values into the data manager, call:
+    Remember to always `clear` the manager at the start of your program.
 
-    set_data(axis_x=10, axis_y=20, axis_z=-15)
+Functions & classes
+-------------------
 
-To retrieve the information about axis x and y, call:
+.. note::
 
-    data = get_data('axis_x', 'axis_y')
+    Remember that the code is further described by in-line comments and docstrings.
 
-The result of printing data is as follows:
+The following list shortly summarises the functionality of each code component within the :class:`DataManager` class:
 
-    {'axis_x': 10, 'axis_y': 20}
+    1. :func:`__init__` builds the manager
+    2. :func:`get` accesses the data
+    3. :func:`set` modifies the data
+    4. :func:`clear` clears the disc cache
+    5. :func:`_init_safeguards` initialises the safeguard-related fields
+    6. :func:`_safeguard_transmission_data` safeguards the data before networking it
 
-** Author **
+Additionally, the :func:`_init_manager` function is used to initialise and enclose the manager on import statement,
+as well as provide the functions to interact with it indirectly.
+
+Modifications
+=============
+
+It is recommended that you adjust the `CACHE_PATH` constant to store your cache in the proper place.
+
+.. warning::
+
+    You should be using a SSD drive for cache storage to avoid the delay.
+
+Additionally, you should modify the :func:`__init__` function, especially the `self._transmission_keys` mapping.
+
+Authorship
+==========
 
 Kacper Florianski
-
 """
 
 from diskcache import FanoutCache
@@ -59,13 +82,11 @@ class DataManager:
 
     def __init__(self):
         """
+        Constructor function used to initialise the data manager.
 
-        Function used to initialise the data manager.
-
-        ** Modifications **
-
-            1. Modify the '_transmission_keys' set to specify which values should be transmitted to Pi.
-
+        Adjust the `shards` amount in the cache constructor to increase or decrease the amount of parallelism in
+        data-related computations, as well as modify the `self._transmission_keys` set to specify which data should be
+        networked to the middle-level software.
         """
 
         # Initialise the data cache
@@ -74,7 +95,7 @@ class DataManager:
         # Create a set of keys matching data which should be sent over the network
         self._transmission_keys = {
             "Thr_FP", "Thr_FS", "Thr_AP", "Thr_AS", "Thr_TFP", "Thr_TFS", "Thr_TAP", "Thr_TAS", "Mot_R", "Mot_G",
-            "Mot_F", "LED_M"
+            "Mot_F"
         }
 
         # Initialise safeguard-related fields
@@ -82,15 +103,17 @@ class DataManager:
 
     def get(self, *args, transmit=False) -> dict:
         """
+        Function used to access the cached values. Guards against over-current on networked data.
 
-        Function used to access the cache.
+        Example of usage::
 
-        Returns full dictionary if no args passed, or partial data if either args are passed or transmit is set to True.
+            partial_data = get("Mot_G")  # returns a dictionary with a single entry
+            full_data = get()  # returns a dictionary with several entries
+            transmission_full = get(transmit=True)  # returns a dictionary with values which are networked
 
-        :param args: Keys to retrieve
-        :param transmit: Boolean to specify if the transmission-only data should be retrieved
-        :return: Data stored in the data manager
-
+        :param args: Keys to retrieve (returns all keys if no args are passed)
+        :param transmit: Boolean to specify if only the transmission data should be retrieved
+        :return: Dictionary of the data
         """
 
         # If the data retrieved is meant to be sent over the network
@@ -105,11 +128,13 @@ class DataManager:
 
     def set(self, **kwargs):
         """
-
         Function used to modify the cache.
 
-        :param kwargs: Key, value pairs of data to modify.
+        Example of usage::
 
+            set(Mot_G=1500)  # Does self._data["Mot_G"] = 1500
+
+        :param kwargs: Key, value pairs of data to modify.
         """
 
         # Update the data with the given keyword arguments
@@ -118,26 +143,20 @@ class DataManager:
 
     def clear(self):
         """
-
         Function used to clear the cache.
-
         """
 
         self._data.clear()
 
     def _init_safeguards(self):
         """
-
         Function used to initialise all fields related to the safeguarding operations.
 
-        ** Modifications **
+        You should modify::
 
-            1. Modify the '_SAFEGUARD_KEYS' set to specify which values should be safeguarded.
-
-            2. Modify the '_AMP_LIMIT' constant to specify the amp limit (I recommend picking a slightly smaller value).
-
-            3. Modify the '_IDLE_VALUES' set to specify which values should be ignored (default values).
-
+            1. 'self._SAFEGUARD_KEYS' set to specify which values should be safeguarded.
+            2. 'self._AMP_LIMIT' constant to specify the amp limit (pick a slightly smaller value than required).
+            3. 'self._IDLE_VALUES' set to specify which values should be ignored (default values).
         """
 
         # Initialise the keys to safeguard
@@ -166,11 +185,9 @@ class DataManager:
 
     def _safeguard_transmission_data(self, *args):
         """
-
         Function used to safeguard the values that are to be transmitted to Raspberry Pi and further.
 
-        :param args: Args from the 'get' function
-
+        :param args: Args from the `get` function
         """
 
         # Fetch selected data or transmission-specific dictionary if no args passed
@@ -214,28 +231,45 @@ class DataManager:
 # Create a closure for the data manager
 def _init_manager():
     """
-
     Function used to create a closure for the data manager.
 
     :return: Enclosed functions
-
     """
 
-    # Create a free variable for the Data Manager
+    # Create a free variable for the :class:`DataManager`
     d = DataManager()
 
     # Inner function to return the current state of the data
     def get_data(*args, transmit=False):
+        """
+        Encloses :func:`DataManager.get`.
+
+        :param args: Keys passed to get
+        :param transmit: Boolean passed to get
+        :return: Result of the :func:`get` function
+        """
+
         return d.get(*args, transmit=transmit)
 
     # Inner function to alter the data
     def set_data(**kwargs):
-        return d.set(**kwargs)
+        """
+        Encloses :func:`DataManager.set`.
+
+        :param kwargs: Key, value pairs passed to set
+        """
+
+        d.set(**kwargs)
 
     # Inner function to clear the cache
     def clear():
+        """
+        Encloses :func:`DataManager.clear`.
+        """
+
         d.clear()
 
+    # Return the enclosed functions
     return get_data, set_data, clear
 
 

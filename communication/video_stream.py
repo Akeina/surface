@@ -1,42 +1,56 @@
 """
+Video Stream
+************
 
-Video Stream is used to handle the visual data exchange with surface.
+Description
+===========
 
-** Functionality **
+This module is used to handle the visual data exchange with the Raspberry Pi in a separate thread.
 
-By importing the module you gain access to the class 'VideoStream'.
+Functionality
+=============
 
-You should create an instance of 'VideoStream' and use the 'run' function to start the communication. The constructor of
-takes 2 optional parameters - 'ip' and 'port', which can be specified to identify the address of the Raspberry Pi (host)
-to connect with the surface. Ip passed should be a string, whereas the port an integer.
+VideoStream
+-----------
 
-Once connected, the class should handle everything, including formatting, encoding and re-connecting in case of
-data loss. Additionally, the class allows you to access the frame through the 'frame' field.
+The :class:`VideoStream` class provides a TCP-based streaming of a single camera.
 
-You should modify any `_handle_data` functions to change how the data is processed.
+Execution
+---------
 
-** Constants and other values **
+To start the stream, you should create an instance of :class:`VideoStream` and call :func:`stream`::
 
-All constants and other important values are mentioned and explained within the corresponding functions.
+    stream = VideoStream(ip=ip, port=port)
+    stream.stream()
 
-** Example **
+where `ip` and `port` are the connection-related values.
 
-Let ip be 169.254.147.140 and port 50001. To host a stream with the given address, call:
+Functions & classes
+-------------------
 
-    video_stream = VideoStream(ip=169.254.147.140)
+.. note::
 
-The port is 50001 by default, so it's not necessary to explicitly specify it. To run, call:
+    Remember that the code is further described by in-line comments and docstrings.
 
-    video_stream.connect()
+The following list shortly summarises the functionality of each code component within the :class:`VideoStream` class:
 
-Let frame be a cv2 numpy array. To send it, call
+    1. :class:`DataError` is a support class to handle custom exceptions
+    2. :func:`__init__` builds the stream object
+    3. :func:`frame` is a getter for the camera frame
+    4. :func:`_handle_data` receives and sends the data
+    5. :func:`_connect` runs an infinite loop to keep exchanging the data (frames)
+    6. :func:`stream` starts the streaming thread
 
-    video_stream.frame = frame
+Modifications
+=============
 
-** Author **
+The only functions that could require modification are :func:`_on_surface_disconnected` and :func:`_handle_data`, as
+the module expands. You should also consider modifying the `self._TIMEOUT` value within :func:`__init__`.
+
+Authorship
+==========
 
 Kacper Florianski
-
 """
 
 import socket
@@ -54,12 +68,12 @@ class VideoStream:
 
     def __init__(self, ip="localhost", port=50001):
         """
+        Constructor function used to initialise the stream.
 
-        Function used to initialise the stream.
+        It is recommended that you change the `self._RECONNECT_DELAY` to adjust the delay on reconnection with the Pi.
 
         :param ip: Raspberry Pi's IP address
         :param port: Raspberry Pi's port
-
         """
 
         # Save the host and port information
@@ -72,7 +86,7 @@ class VideoStream:
         # Initialise the delay constant to offload some computing power when reconnecting
         self._RECONNECT_DELAY = 1
 
-        # Override the process as a thread to handle the frame correctly
+        # Build and store the thread instance
         self._thread = Thread(target=self._connect)
 
         # Initialise the frame-end string to recognise when a full frame was received
@@ -86,13 +100,19 @@ class VideoStream:
 
     @property
     def frame(self):
+        """
+        Getter for the camera frame
+
+        :return: OpenCV-formatted frame (numpy array)
+        """
+
         return self._frame
 
     def _handle_data(self):
         """
+        Function used to process the frames and send them to surface.
 
-        Function used to exchange and process the frames.
-
+        Any frame-related modifications should be introduced here, preferably encapsulated in another function.
         """
 
         # Once connected, keep receiving and sending the data, raise exception in case of errors
@@ -123,16 +143,10 @@ class VideoStream:
 
     def _connect(self):
         """
-
         Function used to run a continuous connection with Raspberry Pi.
 
         Runs an infinite loop that performs re-connection to the given address as well as exchanges data with it, via
-        blocking send and receive functions. The data exchanged is JSON-encoded.
-
-        ** Modifications **
-
-            1. Modify the bottom try, except block to change non-data-specific error-handling.
-
+        blocking send and receive functions. The data exchanged is pickled using :mod:`dill`.
         """
 
         # Never stop the connection once it was started
@@ -173,6 +187,9 @@ class VideoStream:
                 continue
 
     def stream(self):
+        """
+        Function used to start the streaming thread.
+        """
 
         # Start receiving the video stream
         self._thread.start()
