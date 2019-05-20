@@ -1,0 +1,104 @@
+'''
+Created on May 2019
+
+@author: Jane
+'''
+
+import sys
+from PySide2.QtWidgets import QApplication, QWidget, QLabel, QPushButton
+from PySide2.QtGui import QIcon, QPixmap
+from PySide2 import QtCore, QtGui, QtWidgets
+
+class GUI(QWidget):
+
+    def __init__(self):
+        super().__init__()
+        self.left = 1
+        self.top = 50
+        self.width = 100
+        self.height = 100
+        self.initUI()
+        self.home_button()
+        self.info_button()
+        self.help_button()
+        
+        
+    def initUI(self):
+        self.setWindowTitle("Controls") 
+        self.setGeometry(self.left, self.top, self.width, self.height)
+
+        mainWindow = QWidget()
+        #screenShape = QtCore.Qt.QDesktopWidget().screenGeometry()
+        #mainWindow.resize(self.screenShape.width(), self.screenShape.height())
+        #mainWindow.show()
+
+        width = mainWindow.frameGeometry().width()
+        height = mainWindow.frameGeometry().height()
+        
+        
+        
+        label = QLabel(self)
+        bkgrnd = QPixmap('background.png')
+
+        scale = bkgrnd.scaled(1920, 1050, QtCore.Qt.IgnoreAspectRatio)   
+        
+        label.setPixmap(scale)
+        self.resize(bkgrnd.width(),bkgrnd.height())
+        self.show()
+        
+        #self.setFixedSize(self.layout.sizeHint())
+        
+        
+    def home_button(self):
+        button = QPushButton('',self)
+        home_image = QPixmap('home.png')
+        button.setIcon(QIcon(home_image))
+        button.setIconSize(QtCore.QSize(100,120))
+        button.setStyleSheet("QPushButton{background: transparent;}")
+        
+        button.move(20,20)
+        button.clicked.connect(self.on_click_Home)     
+        button.show()
+
+    def on_click_Home(self):
+        print('test')
+        self.show()
+        
+        
+    def info_button(self):
+        button = QPushButton('', self)
+        info_image = QPixmap('info.png')
+        button.setIcon(QIcon(info_image))
+        button.setIconSize(QtCore.QSize(100,120))
+        button.setStyleSheet("QPushButton{background: transparent;}")
+        
+        button.move(150,20)
+        button.clicked.connect(self.on_click_info)
+        button.show()
+        
+    def on_click_info(self):
+        print('test2')
+        self.show()
+        
+        
+    def help_button(self):
+        button = QPushButton('', self)
+        help_image = QPixmap('help.png')
+        button.setIcon(QIcon(help_image))
+        button.setIconSize(QtCore.QSize(100,120))
+        button.setStyleSheet("QPushButton{background: transparent;}")
+        
+        button.move(280,20)
+        button.clicked.connect(self.on_click_help)
+        button.show()
+        
+    def on_click_help(self):
+        print('test3')
+        self.show()
+        
+        
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    ex = GUI()
+    sys.exit(app.exec_())
